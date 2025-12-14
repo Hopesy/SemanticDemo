@@ -27,15 +27,14 @@ class Program
             var funPluginPath = FindPluginDirectory("FunPlugin");
             if (funPluginPath == null)
             {
-                Console.WriteLine("警告: 未找到 FunPlugin 目录，跳过插件演示");
-                Console.WriteLine("你可以从 Semantic Kernel 仓库复制 prompt_template_samples/FunPlugin 到解决方案根目录\n");
+                Console.WriteLine("警告: 未找到 FunPlugin 目录，跳过插件演示\n");
             }
             else
             {
                 var funPluginFunctions = kernel.ImportPluginFromPromptDirectory(funPluginPath);
-                Console.WriteLine($"已加载插件: FunPlugin\n");
+                Console.WriteLine($"已加载插件: FunPlugin (路径: {funPluginPath})\n");
 
-                // 步骤 4: 调用函数
+                // 步骤 4: 调用 Joke 函数
                 Console.WriteLine("步骤 4: 调用 Joke 函数...");
                 var arguments = new KernelArguments { ["input"] = "穿越到恐龙时代" };
                 var result = await kernel.InvokeAsync(funPluginFunctions["Joke"], arguments);
@@ -81,8 +80,15 @@ class Program
 
         while (currentDir != null)
         {
-            // 查找 prompt_template_samples/PluginName
-            var pluginPath = Path.Combine(currentDir.FullName, "prompt_template_samples", pluginName);
+            // 优先查找 Common/PromptPlugins/PluginName（项目内置插件）
+            var pluginPath = Path.Combine(currentDir.FullName, "Common", "PromptPlugins", pluginName);
+            if (Directory.Exists(pluginPath))
+            {
+                return pluginPath;
+            }
+
+            // 查找 prompt_template_samples/PluginName（官方示例）
+            pluginPath = Path.Combine(currentDir.FullName, "prompt_template_samples", pluginName);
             if (Directory.Exists(pluginPath))
             {
                 return pluginPath;
