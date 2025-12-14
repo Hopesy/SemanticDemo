@@ -48,21 +48,11 @@ class Program
     {
         Console.WriteLine("【示例 1】基础依赖注入\n");
 
-        var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
         // 创建 DI 容器
         var services = new ServiceCollection();
 
-        // 注册 Kernel
-        var builder = services.AddKernel();
-        if (useAzureOpenAI)
-        {
-            builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-        }
-        else
-        {
-            builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-        }
+        // 注册 Kernel（使用统一配置）
+        ConfigureKernel(services.AddKernel());
 
         // 构建服务提供程序
         var serviceProvider = services.BuildServiceProvider();
@@ -81,8 +71,6 @@ class Program
     {
         Console.WriteLine("【示例 2】注入自定义服务\n");
 
-        var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
         var services = new ServiceCollection();
 
         // 注册自定义服务
@@ -90,14 +78,7 @@ class Program
 
         // 注册 Kernel 和插件
         var builder = services.AddKernel();
-        if (useAzureOpenAI)
-        {
-            builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-        }
-        else
-        {
-            builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-        }
+        ConfigureKernel(builder);
 
         // 注册插件（插件会自动从 DI 容器获取依赖）
         builder.Plugins.AddFromType<GreetingPlugin>();
@@ -117,8 +98,6 @@ class Program
     {
         Console.WriteLine("【示例 3】日志集成\n");
 
-        var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
         var services = new ServiceCollection();
 
         // 添加日志
@@ -130,14 +109,7 @@ class Program
 
         // 注册 Kernel
         var kernelBuilder = services.AddKernel();
-        if (useAzureOpenAI)
-        {
-            kernelBuilder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-        }
-        else
-        {
-            kernelBuilder.AddOpenAIChatCompletion(model, apiKey, orgId);
-        }
+        ConfigureKernel(kernelBuilder);
 
         var serviceProvider = services.BuildServiceProvider();
         var kernel = serviceProvider.GetRequiredService<Kernel>();
@@ -145,6 +117,31 @@ class Program
         Console.WriteLine("执行提示（查看日志输出）:\n");
         var result = await kernel.InvokePromptAsync("什么是 Semantic Kernel？");
         Console.WriteLine($"\n结果: {result}\n");
+    }
+
+    /// <summary>
+    /// 配置 Kernel Builder（使用统一的 Settings 配置）
+    /// </summary>
+    static void ConfigureKernel(IKernelBuilder builder)
+    {
+        var (useAzureOpenAI, model, endpoint, apiKey, orgId) = Settings.LoadFromFile();
+
+        if (useAzureOpenAI)
+        {
+            // Azure OpenAI
+            builder.AddAzureOpenAIChatCompletion(model, endpoint, apiKey);
+        }
+        else if (!string.IsNullOrEmpty(endpoint))
+        {
+            // 自定义端点（DeepSeek、本地模型等）
+            var httpClient = new HttpClient { BaseAddress = new Uri(endpoint) };
+            builder.AddOpenAIChatCompletion(model, apiKey, orgId, httpClient: httpClient);
+        }
+        else
+        {
+            // 标准 OpenAI
+            builder.AddOpenAIChatCompletion(model, apiKey, orgId);
+        }
     }
 }
 

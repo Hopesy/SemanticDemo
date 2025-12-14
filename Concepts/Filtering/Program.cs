@@ -20,17 +20,8 @@ class Program
 
         try
         {
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
-            var builder = Kernel.CreateBuilder();
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-            }
+            // 创建 Kernel Builder
+            var builder = Settings.CreateKernelBuilder();
 
             // ===== 示例 1: 函数调用过滤器 =====
             await Example1_FunctionFilter(builder);

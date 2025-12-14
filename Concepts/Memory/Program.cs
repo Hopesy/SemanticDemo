@@ -20,30 +20,17 @@ class Program
 
         try
         {
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
-            var builder = Kernel.CreateBuilder();
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-                builder.AddAzureOpenAITextEmbeddingGeneration("text-embedding-ada-002", azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-                builder.AddOpenAITextEmbeddingGeneration("text-embedding-ada-002", apiKey, orgId);
-            }
-
-            var kernel = builder.Build();
+            // 创建 Kernel（包含 Embedding 服务）
+            var kernel = Settings.CreateKernelBuilderWithEmbedding().Build();
 
             // ===== 示例 1: 文本嵌入生成 =====
             await Example1_TextEmbedding(kernel);
 
             // ===== 示例 2: 语义记忆存储 =====
-            await Example2_SemanticMemory(kernel, apiKey, orgId, useAzureOpenAI, azureEndpoint);
+            await Example2_SemanticMemory(kernel);
 
             // ===== 示例 3: 语义搜索 =====
-            await Example3_SemanticSearch(kernel, apiKey, orgId, useAzureOpenAI, azureEndpoint);
+            await Example3_SemanticSearch(kernel);
 
             Console.WriteLine("\n✅ 所有示例完成!");
         }
@@ -78,7 +65,7 @@ class Program
     /// <summary>
     /// 示例 2: 语义记忆存储（概念演示）
     /// </summary>
-    static async Task Example2_SemanticMemory(Kernel kernel, string apiKey, string? orgId, bool useAzure, string? endpoint)
+    static async Task Example2_SemanticMemory(Kernel kernel)
     {
         Console.WriteLine("【示例 2】语义记忆存储（概念演示）\n");
 
@@ -109,7 +96,7 @@ class Program
     /// <summary>
     /// 示例 3: 语义搜索（概念演示）
     /// </summary>
-    static async Task Example3_SemanticSearch(Kernel kernel, string apiKey, string? orgId, bool useAzure, string? endpoint)
+    static async Task Example3_SemanticSearch(Kernel kernel)
     {
         Console.WriteLine("【示例 3】语义搜索（概念演示）\n");
 

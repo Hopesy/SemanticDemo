@@ -20,30 +20,17 @@ class Program
 
         try
         {
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
-            var builder = Kernel.CreateBuilder();
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-                builder.AddAzureOpenAITextEmbeddingGeneration("text-embedding-ada-002", azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-                builder.AddOpenAITextEmbeddingGeneration("text-embedding-ada-002", apiKey, orgId);
-            }
-
-            var kernel = builder.Build();
+            // 创建 Kernel（包含 Embedding 服务）
+            var kernel = Settings.CreateKernelBuilderWithEmbedding().Build();
 
             // ===== 示例 1: 基础 RAG 流程 =====
-            await Example1_BasicRAG(kernel, apiKey, orgId, useAzureOpenAI, azureEndpoint);
+            await Example1_BasicRAG(kernel);
 
             // ===== 示例 2: 带上下文的对话 =====
-            await Example2_RAGWithContext(kernel, apiKey, orgId, useAzureOpenAI, azureEndpoint);
+            await Example2_RAGWithContext(kernel);
 
             // ===== 示例 3: 多文档 RAG =====
-            await Example3_MultiDocumentRAG(kernel, apiKey, orgId, useAzureOpenAI, azureEndpoint);
+            await Example3_MultiDocumentRAG(kernel);
 
             Console.WriteLine("\n✅ 所有示例完成!");
         }
@@ -60,7 +47,7 @@ class Program
     /// <summary>
     /// 示例 1: 基础 RAG 流程（概念演示）
     /// </summary>
-    static async Task Example1_BasicRAG(Kernel kernel, string apiKey, string? orgId, bool useAzure, string? endpoint)
+    static async Task Example1_BasicRAG(Kernel kernel)
     {
         Console.WriteLine("【示例 1】基础 RAG 流程（概念演示）\n");
 
@@ -101,7 +88,7 @@ class Program
     /// <summary>
     /// 示例 2: 带上下文的对话（概念演示）
     /// </summary>
-    static async Task Example2_RAGWithContext(Kernel kernel, string apiKey, string? orgId, bool useAzure, string? endpoint)
+    static async Task Example2_RAGWithContext(Kernel kernel)
     {
         Console.WriteLine("【示例 2】带上下文的对话（概念演示）\n");
 
@@ -142,7 +129,7 @@ class Program
     /// <summary>
     /// 示例 3: 多文档 RAG（概念演示）
     /// </summary>
-    static async Task Example3_MultiDocumentRAG(Kernel kernel, string apiKey, string? orgId, bool useAzure, string? endpoint)
+    static async Task Example3_MultiDocumentRAG(Kernel kernel)
     {
         Console.WriteLine("【示例 3】多文档 RAG（概念演示）\n");
 

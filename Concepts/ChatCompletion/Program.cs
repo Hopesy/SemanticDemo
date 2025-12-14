@@ -19,32 +19,16 @@ class Program
 
         try
         {
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
             // 创建 Kernel
-            var builder = Kernel.CreateBuilder();
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-            }
-            var kernel = builder.Build();
-
+            var kernel = Settings.CreateKernelBuilder().Build();
             // ===== 示例 1: 基础聊天 =====
             await Example1_BasicChat(kernel);
-
             // ===== 示例 2: 多轮对话 =====
             await Example2_MultiTurnChat(kernel);
-
             // ===== 示例 3: 系统消息 =====
             await Example3_SystemMessage(kernel);
-
             // ===== 示例 4: 流式聊天 =====
             await Example4_StreamingChat(kernel);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)
@@ -55,7 +39,6 @@ class Program
         Console.WriteLine("\n按任意键退出...");
         Console.ReadKey();
     }
-
     /// <summary>
     /// 示例 1: 基础聊天
     /// </summary>

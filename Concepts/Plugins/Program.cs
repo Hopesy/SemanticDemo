@@ -19,18 +19,8 @@ class Program
 
         try
         {
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
-            var builder = Kernel.CreateBuilder();
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-            }
-            var kernel = builder.Build();
+            // 创建 Kernel
+            var kernel = Settings.CreateKernelBuilder().Build();
 
             // ===== 示例 1: 创建和导入原生插件 =====
             await Example1_NativePlugin(kernel);

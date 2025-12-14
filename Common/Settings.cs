@@ -1,3 +1,5 @@
+#pragma warning disable SKEXP0010
+
 using System.Text.Json;
 using Microsoft.SemanticKernel;
 
@@ -138,6 +140,39 @@ public class Settings
         {
             // 标准 OpenAI
             builder.AddOpenAIChatCompletion(model, apiKey, orgId);
+        }
+
+        return builder;
+    }
+
+    /// <summary>
+    /// 创建配置好的 Kernel Builder（包含 Embedding 服务）
+    /// 用于需要文本嵌入功能的场景（如 Memory、RAG）
+    /// </summary>
+    /// <param name="embeddingModel">嵌入模型名称，默认为 text-embedding-ada-002</param>
+    public static IKernelBuilder CreateKernelBuilderWithEmbedding(string embeddingModel = "text-embedding-ada-002")
+    {
+        var (useAzureOpenAI, model, endpoint, apiKey, orgId) = LoadFromFile();
+        var builder = Kernel.CreateBuilder();
+
+        if (useAzureOpenAI)
+        {
+            // Azure OpenAI
+            builder.AddAzureOpenAIChatCompletion(model, endpoint, apiKey);
+            builder.AddAzureOpenAITextEmbeddingGeneration(embeddingModel, endpoint, apiKey);
+        }
+        else if (!string.IsNullOrEmpty(endpoint))
+        {
+            // 自定义端点（DeepSeek、本地模型等）
+            var httpClient = new HttpClient { BaseAddress = new Uri(endpoint) };
+            builder.AddOpenAIChatCompletion(model, apiKey, orgId, httpClient: httpClient);
+            builder.AddOpenAITextEmbeddingGeneration(embeddingModel, apiKey, orgId, httpClient: httpClient);
+        }
+        else
+        {
+            // 标准 OpenAI
+            builder.AddOpenAIChatCompletion(model, apiKey, orgId);
+            builder.AddOpenAITextEmbeddingGeneration(embeddingModel, apiKey, orgId);
         }
 
         return builder;
