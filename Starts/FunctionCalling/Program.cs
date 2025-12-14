@@ -8,7 +8,7 @@ using Common;
 namespace FunctionCalling;
 
 /// <summary>
-/// 函数调用基础教程
+/// 02 函数调用基础教程
 /// 演示如何添加插件并让 AI 自动调用函数
 /// </summary>
 class Program
@@ -23,21 +23,15 @@ class Program
             var builder = Settings.CreateKernelBuilder();
             builder.Plugins.AddFromType<TimeInformation>();
             builder.Plugins.AddFromType<MathOperations>();
-
             var kernel = builder.Build();
-
             // ===== 示例 1: AI 可能产生幻觉 =====
             await Example1_WithoutPlugin(kernel);
-
             // ===== 示例 2: 直接调用插件 =====
             await Example2_DirectPluginCall(kernel);
-
             // ===== 示例 3: 自动函数调用 =====
             await Example3_AutoFunctionCalling(kernel);
-
             // ===== 示例 4: 复杂场景 =====
             await Example4_ComplexScenario(kernel);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)

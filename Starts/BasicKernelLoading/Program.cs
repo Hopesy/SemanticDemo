@@ -8,7 +8,7 @@ using Common;
 namespace BasicKernelLoading;
 
 /// <summary>
-/// Kernel 基础加载
+/// 01 Kernel 基础加载
 /// 演示如何创建和使用 Kernel 的基本操作
 /// </summary>
 class Program
@@ -19,24 +19,18 @@ class Program
 
         try
         {
-            // 创建 Kernel
+            // 创建Kernel(略...)
             var kernel = Settings.CreateKernelBuilder().Build();
-
             // ===== 示例 1: 基础提示调用 =====
             await Example1_BasicPrompt(kernel);
-
             // ===== 示例 2: 模板化提示 =====
             await Example2_TemplatedPrompt(kernel);
-
             // ===== 示例 3: 流式调用 =====
             await Example3_StreamingPrompt(kernel);
-
             // ===== 示例 4: 执行设置 =====
             await Example4_ExecutionSettings(kernel);
-
             // ===== 示例 5: JSON 格式输出 =====
             await Example5_JsonOutput(kernel);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)
@@ -92,9 +86,17 @@ class Program
 
         Console.WriteLine($"提示: {prompt.Replace("{{$topic}}", arguments["topic"]?.ToString())}");
         Console.WriteLine("流式回答: ");
-
+        // 仅仅是创建了 "序列生成器" 对象，方法内部的代码【完全没有】开始执行！
+        //var streamingResult = kernel.InvokePromptStreamingAsync(prompt, arguments);
+        //InvokePromptStreamingAsync方法的内部逻辑会异步地读取这个HTTP响应流。它不是一次性读完，而是一行一行地监听
+        //成功解析出一个文本块（update）后，它不会将其存储在列表中，而是会使用 yield return 关键字立即将这个值“产出”给调用者。
+        //yield return会暂停InvokePromptStreamingAsync方法的执行，将控制权和update值返回给wait foreach循环。
+        //当循环准备好处理下一个项目时，InvokePromptStreamingAsync方法会从上次暂停的地方继续执行等待下一个SSE事件。
+        //当LLM完成全部回答的生成后，它会发送一个特殊的终止信号（例如 data: [DONE])，然后关闭 HTTP 连接
+        //SDK接收到这个信号或发现流已关闭时，InvokePromptStreamingAsync方法就会执行完毕，await foreach循环也随之自然结束
         await foreach (var update in kernel.InvokePromptStreamingAsync(prompt, arguments))
         {
+            //update就是每次生成的增量文本，包含换行符
             Console.Write(update);
             await Task.Delay(20); // 打字机效果
         }
@@ -108,7 +110,6 @@ class Program
     static async Task Example4_ExecutionSettings(Kernel kernel)
     {
         Console.WriteLine("【示例 4】执行设置\n");
-
         var prompt = "给我讲一个关于{{$topic}}的故事。";
         var arguments = new KernelArguments(
             new OpenAIPromptExecutionSettings
