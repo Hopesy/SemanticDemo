@@ -19,20 +19,8 @@ class Program
 
         try
         {
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
             // 创建 Kernel 并添加插件
-            var builder = Kernel.CreateBuilder();
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-            }
-
-            // 添加插件
+            var builder = Settings.CreateKernelBuilder();
             builder.Plugins.AddFromType<TimeInformation>();
             builder.Plugins.AddFromType<MathOperations>();
 

@@ -19,19 +19,8 @@ class Program
 
         try
         {
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-
             // 创建 Kernel
-            var builder = Kernel.CreateBuilder();
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-            }
-            var kernel = builder.Build();
+            var kernel = Settings.CreateKernelBuilder().Build();
 
             // ===== 示例 1: 基础提示调用 =====
             await Example1_BasicPrompt(kernel);

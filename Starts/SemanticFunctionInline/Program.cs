@@ -16,20 +16,8 @@ class Program
 
         try
         {
-            // 加载配置并创建 Kernel
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-            var builder = Kernel.CreateBuilder();
-
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-            }
-
-            var kernel = builder.Build();
+            // 创建 Kernel
+            var kernel = Settings.CreateKernelBuilder().Build();
 
             // ===== 示例 1: 简单的总结函数 =====
             Console.WriteLine("【示例 1】创建总结函数\n");

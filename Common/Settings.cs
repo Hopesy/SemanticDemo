@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.SemanticKernel;
 
 namespace Common;
 
@@ -42,6 +43,8 @@ public class Settings
             throw new InvalidOperationException("配置文件格式错误");
         }
 
+        // 支持 azure、openai、deepseek 等类型
+        // deepseek 和其他兼容 OpenAI API 的服务使用 endpoint 字段指定自定义端点
         bool useAzureOpenAI = settings.Type.Equals("azure", StringComparison.OrdinalIgnoreCase);
 
         return (
@@ -109,5 +112,34 @@ public class Settings
         Console.WriteLine($"  - {openAiPath}");
         Console.WriteLine($"  - {azurePath}");
         Console.WriteLine($"\n请根据你的 AI 服务选择一个，重命名为 appsettings.json 并填入真实的 API 密钥。");
+    }
+
+    /// <summary>
+    /// 创建配置好的 Kernel Builder
+    /// 支持 OpenAI、Azure OpenAI、DeepSeek 等所有兼容 OpenAI API 的服务
+    /// </summary>
+    public static IKernelBuilder CreateKernelBuilder()
+    {
+        var (useAzureOpenAI, model, endpoint, apiKey, orgId) = LoadFromFile();
+        var builder = Kernel.CreateBuilder();
+
+        if (useAzureOpenAI)
+        {
+            // Azure OpenAI
+            builder.AddAzureOpenAIChatCompletion(model, endpoint, apiKey);
+        }
+        else if (!string.IsNullOrEmpty(endpoint))
+        {
+            // 自定义端点（DeepSeek、本地模型等）
+            var httpClient = new HttpClient { BaseAddress = new Uri(endpoint) };
+            builder.AddOpenAIChatCompletion(model, apiKey, orgId, httpClient: httpClient);
+        }
+        else
+        {
+            // 标准 OpenAI
+            builder.AddOpenAIChatCompletion(model, apiKey, orgId);
+        }
+
+        return builder;
     }
 }

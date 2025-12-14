@@ -15,30 +15,13 @@ class Program
 
         try
         {
-            // 步骤 1: 配置 AI 服务凭据
-            Console.WriteLine("步骤 1: 加载配置...");
-            var (useAzureOpenAI, model, azureEndpoint, apiKey, orgId) = Settings.LoadFromFile();
-            Console.WriteLine($"使用 {(useAzureOpenAI ? "Azure OpenAI" : "OpenAI")} 服务");
-            Console.WriteLine($"模型: {model}\n");
-
-            // 步骤 2: 创建 Kernel
-            Console.WriteLine("步骤 2: 创建 Kernel...");
-            var builder = Kernel.CreateBuilder();
-
-            if (useAzureOpenAI)
-            {
-                builder.AddAzureOpenAIChatCompletion(model, azureEndpoint, apiKey);
-            }
-            else
-            {
-                builder.AddOpenAIChatCompletion(model, apiKey, orgId);
-            }
-
-            var kernel = builder.Build();
+            // 步骤 1: 创建 Kernel
+            Console.WriteLine("步骤 1: 创建 Kernel...");
+            var kernel = Settings.CreateKernelBuilder().Build();
             Console.WriteLine("Kernel 创建成功!\n");
 
-            // 步骤 3: 加载并运行插件
-            Console.WriteLine("步骤 3: 加载插件...");
+            // 步骤 2: 加载并运行插件
+            Console.WriteLine("步骤 2: 加载插件...");
 
             // 查找 FunPlugin 目录
             var funPluginPath = FindPluginDirectory("FunPlugin");
@@ -62,8 +45,8 @@ class Program
                 Console.WriteLine("--- 结束 ---\n");
             }
 
-            // 额外演示：直接调用提示
-            Console.WriteLine("额外演示: 直接调用提示...");
+            // 步骤 3: 直接调用提示
+            Console.WriteLine("步骤 3: 直接调用提示...");
             var prompt = "用一句话介绍什么是 Semantic Kernel";
             var directResult = await kernel.InvokePromptAsync(prompt);
             Console.WriteLine($"\n问题: {prompt}");

@@ -10,4 +10,14 @@
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.23.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="PromptPlugins\" />
+  </ItemGroup>
+
 </Project>
