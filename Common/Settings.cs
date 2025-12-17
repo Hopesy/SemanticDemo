@@ -2,6 +2,9 @@
 
 using System.Text.Json;
 using Microsoft.SemanticKernel;
+using Microsoft.Extensions.AI;
+using Azure.AI.OpenAI;
+using OpenAI;
 
 namespace Common;
 
@@ -194,5 +197,41 @@ public class Settings
         }
 
         return builder;
+    }
+
+    /// <summary>
+    /// 创建 Microsoft.Extensions.AI.IEmbeddingGenerator（最新的 API）
+    /// 用于需要文本嵌入功能的场景（如 Memory、RAG）
+    /// 这是推荐的新 API，替代旧的 ITextEmbeddingGenerationService
+    /// </summary>
+    /// <param name="embeddingModel">嵌入模型名称，默认为 text-embedding-ada-002</param>
+    /// <param name="dimensions">向量维度，默认为 1536（适用于 text-embedding-ada-002）</param>
+    public static IEmbeddingGenerator<string, Embedding<float>> CreateEmbeddingGenerator(
+        string embeddingModel = "text-embedding-ada-002",
+        int? dimensions = 1536)
+    {
+        var (useAzureOpenAI, model, endpoint, apiKey, orgId) = LoadFromFile();
+
+        if (useAzureOpenAI)
+        {
+            // Azure OpenAI
+            var azureClient = new AzureOpenAIClient(new Uri(endpoint), new global::Azure.AzureKeyCredential(apiKey));
+            var embeddingClient = azureClient.GetEmbeddingClient(embeddingModel);
+            return embeddingClient.AsIEmbeddingGenerator(dimensions);
+        }
+        else if (!string.IsNullOrEmpty(endpoint))
+        {
+            // 自定义端点（DeepSeek、本地模型等）
+            var openaiClient = new OpenAIClient(new global::System.ClientModel.ApiKeyCredential(apiKey), new OpenAIClientOptions { Endpoint = new Uri(endpoint) });
+            var embeddingClient = openaiClient.GetEmbeddingClient(embeddingModel);
+            return embeddingClient.AsIEmbeddingGenerator(dimensions);
+        }
+        else
+        {
+            // 标准 OpenAI
+            var openaiClient = new OpenAIClient(new global::System.ClientModel.ApiKeyCredential(apiKey));
+            var embeddingClient = openaiClient.GetEmbeddingClient(embeddingModel);
+            return embeddingClient.AsIEmbeddingGenerator(dimensions);
+        }
     }
 }

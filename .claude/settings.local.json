@@ -9,7 +9,14 @@
       "Bash(dotnet new:*)",
       "Bash(dotnet add package:*)",
       "Bash(dotnet add reference:*)",
-      "Bash(dotnet add:*)"
+      "Bash(dotnet add:*)",
+      "WebSearch",
+      "Bash(dotnet remove:*)",
+      "Bash(for dir in Starts/*/ Concepts/*/ Advances/*/)",
+      "Bash(do if [ -f \"$dir\"*.csproj ])",
+      "Bash(then cd \"$dir\")",
+      "Bash(fi)",
+      "Bash(done)"
     ]
   }
 }

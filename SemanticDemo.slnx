@@ -1,0 +1,36 @@
+<Solution>
+  <Folder Name="/Common/">
+    <Project Path="Common\Common.csproj" Type="Classic C#" />
+  </Folder>
+
+  <Folder Name="/Starts/">
+    <Project Path="Starts\GettingStarted\GettingStarted.csproj" Type="Classic C#" />
+    <Project Path="Starts\BasicKernelLoading\BasicKernelLoading.csproj" Type="Classic C#" />
+    <Project Path="Starts\SemanticFunctionInline\SemanticFunctionInline.csproj" Type="Classic C#" />
+    <Project Path="Starts\KernelArgumentsChat\KernelArgumentsChat.csproj" Type="Classic C#" />
+    <Project Path="Starts\FunctionCalling\FunctionCalling.csproj" Type="Classic C#" />
+  </Folder>
+
+  <Folder Name="/Concepts/">
+    <Project Path="Concepts\ChatCompletion\ChatCompletion.csproj" Type="Classic C#" />
+    <Project Path="Concepts\Plugins\Plugins.csproj" Type="Classic C#" />
+    <Project Path="Concepts\Memory\Memory.csproj" Type="Classic C#" />
+    <Project Path="Concepts\Streaming\Streaming.csproj" Type="Classic C#" />
+    <Project Path="Concepts\FunctionCallingAdvanced\FunctionCallingAdvanced.csproj" Type="Classic C#" />
+    <Project Path="Concepts\PromptTemplates\PromptTemplates.csproj" Type="Classic C#" />
+    <Project Path="Concepts\TextGeneration\TextGeneration.csproj" Type="Classic C#" />
+    <Project Path="Concepts\Filtering\Filtering.csproj" Type="Classic C#" />
+    <Project Path="Concepts\RAG\RAG.csproj" Type="Classic C#" />
+    <Project Path="Concepts\Agents\Agents.csproj" Type="Classic C#" />
+    <Project Path="Concepts\Search\Search.csproj" Type="Classic C#" />
+    <Project Path="Concepts\DependencyInjection\DependencyInjection.csproj" Type="Classic C#" />
+  </Folder>
+
+  <Folder Name="/Advances/">
+    <Project Path="Advances\OrderProcessWorkflow\OrderProcessWorkflow.csproj" Type="Classic C#" />
+  </Folder>
+
+  <Properties Name="Configuration">
+    <Property Name="ActiveConfiguration" Value="Debug|Any CPU" />
+  </Properties>
+</Solution>
