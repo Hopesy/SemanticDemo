@@ -20,19 +20,14 @@ class Program
         {
             // 创建 Kernel
             var kernel = Settings.CreateKernelBuilder().Build();
-
             // ===== 示例 1: 控制输出长度 =====
             await Example1_MaxTokens(kernel);
-
             // ===== 示例 2: 控制创造性（Temperature）=====
             await Example2_Temperature(kernel);
-
             // ===== 示例 3: Top P 采样 =====
             await Example3_TopP(kernel);
-
             // ===== 示例 4: 停止序列 =====
             await Example4_StopSequences(kernel);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)
@@ -57,7 +52,6 @@ class Program
         var settings1 = new OpenAIPromptExecutionSettings { MaxTokens = 50 };
         var result1 = await kernel.InvokePromptAsync(prompt, new(settings1));
         Console.WriteLine($"短输出 (MaxTokens=50):\n{result1}\n");
-
         // 长输出
         var settings2 = new OpenAIPromptExecutionSettings { MaxTokens = 200 };
         var result2 = await kernel.InvokePromptAsync(prompt, new(settings2));
@@ -74,7 +68,6 @@ class Program
     static async Task Example2_Temperature(Kernel kernel)
     {
         Console.WriteLine("【示例 2】控制创造性（Temperature）\n");
-
         string prompt = "给我的咖啡店起一个有创意的名字";
 
         // 低温度 - 保守

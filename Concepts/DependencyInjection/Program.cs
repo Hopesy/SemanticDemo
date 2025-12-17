@@ -23,10 +23,8 @@ class Program
         {
             // ===== 示例 1: 基础 DI 集成 =====
             await Example1_BasicDI();
-
             // ===== 示例 2: 注入自定义服务 =====
             await Example2_CustomService();
-
             // ===== 示例 3: 日志集成 =====
             await Example3_Logging();
 

@@ -59,20 +59,38 @@ public class Settings
     }
 
     /// <summary>
-    /// 向上查找配置文件
+    /// 查找配置文件（优先使用 Common 项目目录下的配置）
     /// </summary>
     private static string? FindConfigFile(string startDir)
     {
-        var dir = new DirectoryInfo(startDir);
+        // 获取 Settings.cs 所在的目录（即 Common 项目目录）
+        var assemblyLocation = typeof(Settings).Assembly.Location;
+        var assemblyDir = Path.GetDirectoryName(assemblyLocation);
+        
+        // 从程序集目录向上查找 Common 目录
+        var dir = new DirectoryInfo(assemblyDir ?? startDir);
         while (dir != null)
         {
-            var configPath = Path.Combine(dir.FullName, ConfigFile);
-            if (File.Exists(configPath))
+            // 检查是否存在 Common 子目录，如果当前就是 Common 目录或包含 Common 子目录
+            var commonConfigPath = Path.Combine(dir.FullName, "Common", ConfigFile);
+            if (File.Exists(commonConfigPath))
             {
-                return configPath;
+                return commonConfigPath;
             }
+            
+            // 检查当前目录是否就是 Common 目录
+            if (dir.Name.Equals("Common", StringComparison.OrdinalIgnoreCase))
+            {
+                var configPath = Path.Combine(dir.FullName, ConfigFile);
+                if (File.Exists(configPath))
+                {
+                    return configPath;
+                }
+            }
+            
             dir = dir.Parent;
         }
+        
         return null;
     }
 

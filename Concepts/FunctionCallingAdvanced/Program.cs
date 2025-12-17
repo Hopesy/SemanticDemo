@@ -20,24 +20,24 @@ class Program
         try
         {
             // 创建 Kernel
-            var kernel = Settings.CreateKernelBuilder().Build();
-
-            // 导入插件
+            var builder = Settings.CreateKernelBuilder();
+            // 【重点】在构建之前，通过 builder 注册插件
+            // 优势：如果 WeatherPlugin 的构造函数需要 logger 或其他服务，DI 容器会自动注入！
+            //builder.Plugins.AddFromType<WeatherPlugin>("Weather");
+            var kernel = builder.Build();
+            // 【重点】构建之后，手动导入插件
+            // 劣势：如果 WeatherPlugin 有复杂的构造函数依赖，这种自动导入可能会失败，
+            // 或者你需要手动new：kernel.ImportPluginFromObject(new WeatherPlugin(logger), "Weather");
             kernel.ImportPluginFromType<WeatherPlugin>("Weather");
             kernel.ImportPluginFromType<CurrencyPlugin>("Currency");
-
             // ===== 示例 1: 自动函数调用 =====
             await Example1_AutoFunctionCalling(kernel);
-
             // ===== 示例 2: 必须调用函数 =====
             await Example2_RequiredFunctionCalling(kernel);
-
             // ===== 示例 3: 禁用函数调用 =====
             await Example3_NoFunctionCalling(kernel);
-
             // ===== 示例 4: 多步骤函数调用 =====
             await Example4_MultiStepFunctionCalling(kernel);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)
@@ -64,7 +64,6 @@ class Program
         var result = await kernel.InvokePromptAsync(
             "北京今天的天气怎么样？",
             new(settings));
-
         Console.WriteLine($"结果: {result}\n");
     }
 
@@ -96,7 +95,9 @@ class Program
 
         var settings = new OpenAIPromptExecutionSettings
         {
-            FunctionChoiceBehavior = FunctionChoiceBehavior.None()
+            FunctionChoiceBehavior = FunctionChoiceBehavior.None(),
+            //旧版写法
+            //ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
         };
 
         var result = await kernel.InvokePromptAsync(

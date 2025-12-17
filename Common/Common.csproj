@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Folder Include="PromptPlugins\" />
+    <Folder Include="Plugins\" />
   </ItemGroup>
 
 </Project>

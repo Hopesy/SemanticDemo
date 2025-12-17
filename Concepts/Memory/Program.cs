@@ -22,16 +22,12 @@ class Program
         {
             // 创建 Kernel（包含 Embedding 服务）
             var kernel = Settings.CreateKernelBuilderWithEmbedding().Build();
-
             // ===== 示例 1: 文本嵌入生成 =====
             await Example1_TextEmbedding(kernel);
-
             // ===== 示例 2: 语义记忆存储 =====
             await Example2_SemanticMemory(kernel);
-
             // ===== 示例 3: 语义搜索 =====
             await Example3_SemanticSearch(kernel);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)
@@ -50,13 +46,10 @@ class Program
     static async Task Example1_TextEmbedding(Kernel kernel)
     {
         Console.WriteLine("【示例 1】文本嵌入生成\n");
-
         var embeddingService = kernel.GetRequiredService<ITextEmbeddingGenerationService>();
-
         // 生成文本的向量表示
         var text = "Semantic Kernel 是一个强大的 AI 编排框架";
         var embedding = await embeddingService.GenerateEmbeddingAsync(text);
-
         Console.WriteLine($"文本: {text}");
         Console.WriteLine($"嵌入维度: {embedding.Length}");
         Console.WriteLine($"前 5 个值: [{string.Join(", ", embedding.Span.Slice(0, Math.Min(5, embedding.Length)).ToArray().Select(v => v.ToString("F4")))}...]\n");

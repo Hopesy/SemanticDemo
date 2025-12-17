@@ -4,7 +4,12 @@
       "Bash(dir:*)",
       "Bash(ls:*)",
       "Bash(powershell:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(mkdir:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet add reference:*)",
+      "Bash(dotnet add:*)"
     ]
   }
 }

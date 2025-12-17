@@ -21,19 +21,14 @@ class Program
         {
             // 创建 Kernel
             var kernel = Settings.CreateKernelBuilder().Build();
-
             // ===== 示例 1: 创建和导入原生插件 =====
             await Example1_NativePlugin(kernel);
-
             // ===== 示例 2: 内联函数插件 =====
             await Example2_InlineFunction(kernel);
-
             // ===== 示例 3: 列出所有插件和函数 =====
             await Example3_ListPlugins(kernel);
-
             // ===== 示例 4: AI 自动调用插件 =====
             await Example4_AutoFunctionCalling(kernel);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)
@@ -51,18 +46,14 @@ class Program
     static async Task Example1_NativePlugin(Kernel kernel)
     {
         Console.WriteLine("【示例 1】创建和导入原生插件\n");
-
         // 导入插件
         kernel.ImportPluginFromType<MathPlugin>("Math");
         kernel.ImportPluginFromType<TextPlugin>("Text");
-
         // 直接调用插件函数
         var result1 = await kernel.InvokeAsync("Math", "Add", new() { ["a"] = "10", ["b"] = "20" });
         Console.WriteLine($"Math.Add(10, 20) = {result1}");
-
         var result2 = await kernel.InvokeAsync("Text", "Uppercase", new() { ["text"] = "hello world" });
         Console.WriteLine($"Text.Uppercase('hello world') = {result2}");
-
         var result3 = await kernel.InvokeAsync("Math", "Multiply", new() { ["a"] = "5", ["b"] = "6" });
         Console.WriteLine($"Math.Multiply(5, 6) = {result3}\n");
     }
@@ -80,22 +71,17 @@ class Program
             new OpenAIPromptExecutionSettings() { MaxTokens = 200 },
             functionName: "TellJoke",
             description: "讲一个笑话");
-
         var result = await kernel.InvokeAsync(jokeFunction, new() { ["topic"] = "程序员" });
         Console.WriteLine($"笑话: {result}\n");
     }
-
     /// <summary>
     /// 示例 3: 列出所有插件和函数
     /// </summary>
     static async Task Example3_ListPlugins(Kernel kernel)
     {
         Console.WriteLine("【示例 3】列出所有插件和函数\n");
-
         var functions = kernel.Plugins.GetFunctionsMetadata();
-
         Console.WriteLine($"共有 {functions.Count()} 个函数:\n");
-
         foreach (var func in functions)
         {
             Console.WriteLine($"插件: {func.PluginName}");
@@ -128,12 +114,10 @@ class Program
         {
             FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
         };
-
         // AI 会自动识别需要调用哪些插件函数
         var result = await kernel.InvokePromptAsync(
             "请计算 15 加 25 的结果，然后将结果转换为大写文本",
             new(executionSettings));
-
         Console.WriteLine($"结果: {result}\n");
     }
 }
