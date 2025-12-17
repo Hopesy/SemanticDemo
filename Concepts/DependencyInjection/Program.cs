@@ -122,14 +122,9 @@ class Program
     /// </summary>
     static void ConfigureKernel(IKernelBuilder builder)
     {
-        var (useAzureOpenAI, model, endpoint, apiKey, orgId) = Settings.LoadFromFile();
+        var (model, endpoint, apiKey, orgId) = Settings.LoadFromFile();
 
-        if (useAzureOpenAI)
-        {
-            // Azure OpenAI
-            builder.AddAzureOpenAIChatCompletion(model, endpoint, apiKey);
-        }
-        else if (!string.IsNullOrEmpty(endpoint))
+        if (!string.IsNullOrEmpty(endpoint))
         {
             // 自定义端点（DeepSeek、本地模型等）
             var httpClient = new HttpClient { BaseAddress = new Uri(endpoint) };

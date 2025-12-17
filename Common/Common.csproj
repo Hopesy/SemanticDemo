@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.AI.OpenAI" Version="2.8.0-beta.1" />
+    <!-- 仅仅是提供记忆存储相关的IEmbeddingGenerator统一接口，用于新版的Embedding API-->
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.1.1" />
+    <!--这才是核心，里面包含了创建client等等，内部包含了很多包-->
     <PackageReference Include="Microsoft.SemanticKernel" Version="1.68.0" />
-    <PackageReference Include="OpenAI" Version="2.8.0" />
   </ItemGroup>
 
   <ItemGroup>

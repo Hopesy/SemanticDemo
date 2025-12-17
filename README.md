@@ -19,36 +19,60 @@ SemanticDemo/
 
 在项目根目录创建 `appsettings.json`：
 
-**OpenAI 配置：**
+**OpenAI 配置（Chat + Embedding 同一服务）：**
 ```json
 {
-  "type": "openai",
-  "model": "gpt-4o-mini",
-  "endpoint": "",
-  "apikey": "your-openai-api-key",
-  "orgId": ""
+  "chatModel": {
+    "model": "gpt-4o-mini",
+    "endpoint": "",
+    "apiKey": "your-openai-api-key",
+    "orgId": ""
+  },
+  "embeddingModel": {
+    "model": "text-embedding-ada-002",
+    "endpoint": "",
+    "apiKey": "your-openai-api-key",
+    "orgId": "",
+    "dimensions": 1536
+  }
 }
 ```
 
-**DeepSeek 配置：**
+**智谱 AI 配置（推荐，Chat + Embedding 同一服务）：**
 ```json
 {
-  "type": "openai",
-  "model": "deepseek-chat",
-  "endpoint": "https://api.deepseek.com",
-  "apikey": "your-deepseek-api-key",
-  "orgId": ""
+  "chatModel": {
+    "model": "glm-4-flash",
+    "endpoint": "https://open.bigmodel.cn/api/paas/v4",
+    "apiKey": "your-zhipu-api-key",
+    "orgId": ""
+  },
+  "embeddingModel": {
+    "model": "embedding-2",
+    "endpoint": "https://open.bigmodel.cn/api/paas/v4",
+    "apiKey": "your-zhipu-api-key",
+    "orgId": "",
+    "dimensions": 1024
+  }
 }
 ```
 
-**Azure OpenAI 配置：**
+**DeepSeek 配置（Chat 用 DeepSeek，Embedding 用 OpenAI）：**
 ```json
 {
-  "type": "azure",
-  "model": "your-deployment-name",
-  "endpoint": "https://your-resource.openai.azure.com/",
-  "apikey": "your-azure-key",
-  "orgId": ""
+  "chatModel": {
+    "model": "deepseek-chat",
+    "endpoint": "https://api.deepseek.com",
+    "apiKey": "your-deepseek-api-key",
+    "orgId": ""
+  },
+  "embeddingModel": {
+    "model": "text-embedding-ada-002",
+    "endpoint": "",
+    "apiKey": "your-openai-api-key-for-embedding",
+    "orgId": "",
+    "dimensions": 1536
+  }
 }
 ```
 
@@ -262,9 +286,9 @@ GettingStarted → DependencyInjection → Filtering
 
 ### 1. 统一配置管理
 所有项目使用 `Settings.CreateKernelBuilder()` 统一创建 Kernel，支持：
-- OpenAI
-- Azure OpenAI
-- DeepSeek
+- OpenAI (Chat + Embedding)
+- 智谱 AI (Chat + Embedding) - 推荐
+- DeepSeek (仅 Chat，Embedding 需配置其他服务)
 - Ollama / LM Studio
 - 任何兼容 OpenAI API 的服务
 
