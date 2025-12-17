@@ -249,7 +249,7 @@ public class KnowledgeItem
     [VectorStoreData]
     public string Category { get; set; } = string.Empty;
 
-    [VectorStoreVector(Dimensions: 1536)]
+    [VectorStoreVector(Dimensions: 768)]
     public ReadOnlyMemory<float> Vector { get; set; }
 }
 
@@ -267,6 +267,6 @@ public class CityInfo
     [VectorStoreData]
     public string Description { get; set; } = string.Empty;
 
-    [VectorStoreVector(Dimensions: 1536)]
+    [VectorStoreVector(Dimensions: 768)]
     public ReadOnlyMemory<float> Vector { get; set; }
 }

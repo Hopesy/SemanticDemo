@@ -62,7 +62,7 @@ SemanticDemo/
 {
   "chatModel": {
     "model": "deepseek-chat",
-    "endpoint": "https://api.deepseek.com",
+    "endpoint": "https://api.deepseek.com/v1",
     "apiKey": "your-deepseek-api-key",
     "orgId": ""
   },
@@ -75,6 +75,33 @@ SemanticDemo/
   }
 }
 ```
+
+**Ollama 配置（本地运行，免费，推荐用于学习）：**
+```json
+{
+  "chatModel": {
+    "model": "deepseek-chat",
+    "endpoint": "https://api.deepseek.com/v1",
+    "apiKey": "your-deepseek-api-key",
+    "orgId": ""
+  },
+  "embeddingModel": {
+    "model": "nomic-embed-text",
+    "endpoint": "http://localhost:11434/v1",
+    "apiKey": "ollama",
+    "dimensions": 768,
+    "orgId": ""
+  }
+}
+```
+
+> **注意**：使用 Ollama 前需要先安装并下载模型：
+> ```bash
+> # 1. 访问 https://ollama.com 下载安装 Ollama
+> # 2. 下载 embedding 模型
+> ollama pull nomic-embed-text
+> # 3. Ollama 会自动在后台运行，监听 http://localhost:11434
+> ```
 
 更多配置示例请参考 `DEEPSEEK_CONFIG.md`。
 
@@ -156,6 +183,13 @@ dotnet run
 | 10 | **RAG** | 检索增强生成 | 知识库、向量检索、上下文注入 | ⭐⭐⭐⭐ |
 | 11 | **Search** | 搜索集成 | Web 搜索、多来源搜索、搜索增强对话 | ⭐⭐⭐ |
 | 12 | **Agents** | AI 代理 | ChatCompletionAgent、多轮对话、带插件的 Agent | ⭐⭐⭐⭐ |
+
+> **重要提示**：Memory、RAG 项目需要配置 **Embedding 服务**。推荐使用：
+> - **Ollama**（本地免费）：配置 `nomic-embed-text` 模型（768 维）
+> - **智谱 AI**（国内可用）：配置 `embedding-2` 模型（1024 维）
+> - **OpenAI**（需国际访问）：配置 `text-embedding-3-small` 或 `text-embedding-ada-002`（1536 维）
+>
+> 注意：向量维度必须与配置文件中的 `dimensions` 参数匹配！
 
 **学习目标：** 构建智能应用，实现 RAG、Agent 等高级 AI 模式。
 
@@ -286,11 +320,11 @@ GettingStarted → DependencyInjection → Filtering
 
 ### 1. 统一配置管理
 所有项目使用 `Settings.CreateKernelBuilder()` 统一创建 Kernel，支持：
-- OpenAI (Chat + Embedding)
-- 智谱 AI (Chat + Embedding) - 推荐
-- DeepSeek (仅 Chat，Embedding 需配置其他服务)
-- Ollama / LM Studio
-- 任何兼容 OpenAI API 的服务
+- **OpenAI** (Chat + Embedding) - 功能最全，需国际访问
+- **智谱 AI** (Chat + Embedding) - 国内可用，推荐
+- **DeepSeek** (仅 Chat) - 性价比高，Embedding 需配置其他服务
+- **Ollama** (本地 Embedding) - 免费，推荐用于学习 Memory/RAG 项目
+- **LM Studio** / 任何兼容 OpenAI API 的服务
 
 ### 2. 丰富的插件库
 `Common/PromptPlugins` 包含 50+ 预定义插件：
@@ -303,6 +337,57 @@ GettingStarted → DependencyInjection → Filtering
 
 ### 3. 完整的中文注释
 每个项目都有详细的中文注释，帮助理解代码逻辑。
+
+---
+
+## ⚠️ 常见问题
+
+### Memory/RAG 项目报错：422 或 404
+
+**原因**：Embedding 服务配置不正确或向量维度不匹配。
+
+**解决方案**：
+
+1. **检查配置文件**：确保 `Common/appsettings.json` 中配置了 `embeddingModel` 节点
+2. **检查向量维度**：
+   - Ollama `nomic-embed-text`：768 维
+   - 智谱 AI `embedding-2`：1024 维
+   - OpenAI `text-embedding-ada-002`：1536 维
+3. **修改代码中的维度**：在 Memory/RAG 项目的数据模型中，将 `[VectorStoreVector(Dimensions: xxx)]` 改为对应的维度
+
+**推荐配置（Ollama）**：
+```json
+{
+  "embeddingModel": {
+    "model": "nomic-embed-text",
+    "endpoint": "http://localhost:11434/v1",
+    "apiKey": "ollama",
+    "dimensions": 768
+  }
+}
+```
+
+然后在 Memory 项目中修改：
+```csharp
+[VectorStoreVector(Dimensions: 768)]  // 改为 768
+public ReadOnlyMemory<float> Vector { get; set; }
+```
+
+### Ollama 连接失败
+
+**原因**：Ollama 服务未启动或模型未下载。
+
+**解决方案**：
+```bash
+# 1. 确认 Ollama 已安装并运行
+curl http://localhost:11434/api/tags
+
+# 2. 下载 embedding 模型
+ollama pull nomic-embed-text
+
+# 3. 验证模型已下载
+ollama list
+```
 
 ---
 
@@ -320,10 +405,15 @@ MIT License
 
 ## 🔗 相关资源
 
+### 官方文档
 - [Semantic Kernel 官方文档](https://learn.microsoft.com/semantic-kernel/)
 - [Semantic Kernel GitHub](https://github.com/microsoft/semantic-kernel)
+
+### AI 服务
 - [OpenAI API 文档](https://platform.openai.com/docs)
 - [DeepSeek API 文档](https://platform.deepseek.com/docs)
+- [智谱 AI 开放平台](https://open.bigmodel.cn/)
+- [Ollama 官网](https://ollama.com/) - 本地运行 AI 模型
 
 ---
 

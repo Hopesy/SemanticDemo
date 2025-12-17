@@ -219,7 +219,7 @@ public class Settings
 
         if (!string.IsNullOrEmpty(modelConfig.Endpoint))
         {
-            // 自定义端点（智谱、DeepSeek、本地模型等）
+            // 自定义端点（智谱、Ollama、本地模型等）
             var openaiClient = new OpenAIClient(new ApiKeyCredential(modelConfig.ApiKey), new OpenAIClientOptions { Endpoint = new Uri(modelConfig.Endpoint) });
             //这个IChatClient是Microsoft.Extensions.AI提供的，更加存粹只负责聊天，这个调用工具需要自己实现
             //ChatCompletion是semantic kernel提供的更高级封装，聊天时候能自动使用工具
