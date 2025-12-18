@@ -38,6 +38,11 @@ class Program
             Console.WriteLine("✅ 知识库初始化完成\n");
 
             // 创建 TextSearch 实例（官方实现）
+            // VectorStoreTextSearch 会自动使用 DataModel 上的特性标注来映射结果
+            // - [TextSearchResultName] -> TextSearchResult.Name
+            // - [TextSearchResultValue] -> TextSearchResult.Value
+            // - [TextSearchResultLink] -> TextSearchResult.Link
+            // - [VectorStoreVector] -> 自动向量化搜索
             var textSearch = new VectorStoreTextSearch<DataModel>(collection);
 
             // ===== 示例 1: 基础 TextSearch 使用（包含过滤和分页） =====
