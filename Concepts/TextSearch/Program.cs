@@ -114,14 +114,27 @@ class Program
     /// <summary>
     /// 示例 1: 基础 TextSearch 使用（包含过滤和分页）
     /// </summary>
+    /// <remarks>
+    /// 搜索机制说明：
+    /// 1. 用户输入的文本会自动转换成向量（通过 EmbeddingGenerator）
+    /// 2. 进行向量相似度搜索（语义搜索，不是关键词匹配）
+    /// 3. 返回最相似的结果
+    ///
+    /// 返回值映射：
+    /// - SearchAsync() -> 返回字符串（[TextSearchResultValue] 标注的字段）
+    /// - GetTextSearchResultsAsync() -> 返回 TextSearchResult（Name, Value, Link）
+    /// - GetSearchResultsAsync() -> 返回原始 DataModel 对象
+    /// </remarks>
     static async Task Example1_BasicTextSearch(ITextSearch textSearch)
     {
         Console.WriteLine("【示例 1】基础 TextSearch 使用\n");
+        Console.WriteLine("💡 搜索机制: 用户输入 → 转换成向量 → 语义相似度搜索\n");
 
         var query = "Semantic Kernel";
 
         // 1. 简单搜索 - 返回字符串结果
-        Console.WriteLine("1. 简单搜索 (SearchAsync):");
+        // 返回 [TextSearchResultValue] 标注的字段（Content）
+        Console.WriteLine("1. 简单搜索 (SearchAsync) - 返回字符串:");
         var searchResults = await textSearch.SearchAsync(query, new TextSearchOptions { Top = 2 });
 
         await foreach (var result in searchResults.Results)
@@ -130,7 +143,8 @@ class Program
         }
 
         // 2. 结构化搜索 - 返回 TextSearchResult
-        Console.WriteLine("\n2. 结构化搜索 (GetTextSearchResultsAsync):");
+        // 包含 Name（Title）、Value（Content）、Link
+        Console.WriteLine("\n2. 结构化搜索 (GetTextSearchResultsAsync) - 返回 TextSearchResult:");
         var textResults = await textSearch.GetTextSearchResultsAsync(query, new TextSearchOptions { Top = 2 });
 
         await foreach (var result in textResults.Results)
@@ -265,7 +279,23 @@ class Program
 /// 数据模型 - 用于向量存储
 /// </summary>
 /// <remarks>
-/// 使用特性标注来指定如何映射到 TextSearchResult
+/// 特性标注说明：
+///
+/// 1. 向量存储特性：
+///    - [VectorStoreKey]: 主键字段
+///    - [VectorStoreData]: 普通数据字段
+///    - [VectorStoreData(IsIndexed = true)]: 可索引字段（用于过滤）
+///    - [VectorStoreVector(1536)]: 向量字段（自动向量化）
+///
+/// 2. TextSearch 映射特性：
+///    - [TextSearchResultName]: 映射到 TextSearchResult.Name（标题）
+///    - [TextSearchResultValue]: 映射到 TextSearchResult.Value（内容）
+///    - [TextSearchResultLink]: 映射到 TextSearchResult.Link（链接）
+///
+/// 3. 搜索行为：
+///    - 用户查询文本会转换成向量
+///    - 与 Embedding 字段（Content 的向量）进行相似度比较
+///    - 返回最相似的记录
 /// </remarks>
 public sealed class DataModel
 {
@@ -273,20 +303,20 @@ public sealed class DataModel
     public Guid Key { get; init; }
 
     [VectorStoreData]
-    [TextSearchResultName]
+    [TextSearchResultName]  // SearchAsync 不返回，GetTextSearchResultsAsync 返回为 Name
     public string Title { get; init; } = string.Empty;
 
     [VectorStoreData]
-    [TextSearchResultValue]
+    [TextSearchResultValue]  // SearchAsync 返回此字段，GetTextSearchResultsAsync 返回为 Value
     public string Content { get; init; } = string.Empty;
 
     [VectorStoreData]
-    [TextSearchResultLink]
+    [TextSearchResultLink]  // SearchAsync 不返回，GetTextSearchResultsAsync 返回为 Link
     public string Link { get; init; } = string.Empty;
 
-    [VectorStoreData(IsIndexed = true)]
+    [VectorStoreData(IsIndexed = true)]  // 可用于 TextSearchFilter 过滤
     public string Category { get; init; } = string.Empty;
 
-    [VectorStoreVector(1536)]
+    [VectorStoreVector(1536)]  // 向量字段：Content 会自动转换成 1536 维向量用于语义搜索
     public string Embedding => Content;
 }
