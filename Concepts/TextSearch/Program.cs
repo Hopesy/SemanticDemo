@@ -40,20 +40,14 @@ class Program
             // 创建 TextSearch 实例（官方实现）
             var textSearch = new VectorStoreTextSearch<DataModel>(collection);
 
-            // ===== 示例 1: 基础 TextSearch 使用 =====
+            // ===== 示例 1: 基础 TextSearch 使用（包含过滤和分页） =====
             await Example1_BasicTextSearch(textSearch);
 
             // ===== 示例 2: TextSearch 插件与自动函数调用 =====
             await Example2_TextSearchWithFunctionCalling(kernel, textSearch);
 
-            // ===== 示例 3: 元数据过滤 =====
-            await Example3_TextSearchWithFiltering(textSearch);
-
-            // ===== 示例 4: 分页支持 =====
-            await Example4_TextSearchWithPagination(textSearch);
-
-            // ===== 示例 5: RAG 场景 - 搜索增强生成 =====
-            await Example5_RAGWithTextSearch(kernel, textSearch);
+            // ===== 示例 3: RAG 场景 - 搜索增强生成 =====
+            await Example3_RAGWithTextSearch(kernel, textSearch);
 
             Console.WriteLine("\n✅ 所有示例完成!");
             Console.WriteLine("\n💡 提示:");
@@ -113,15 +107,16 @@ class Program
     }
 
     /// <summary>
-    /// 示例 1: 基础 TextSearch 使用
+    /// 示例 1: 基础 TextSearch 使用（包含过滤和分页）
     /// </summary>
     static async Task Example1_BasicTextSearch(ITextSearch textSearch)
     {
         Console.WriteLine("【示例 1】基础 TextSearch 使用\n");
 
+        var query = "Semantic Kernel";
+
         // 1. 简单搜索 - 返回字符串结果
         Console.WriteLine("1. 简单搜索 (SearchAsync):");
-        var query = "Semantic Kernel";
         var searchResults = await textSearch.SearchAsync(query, new TextSearchOptions { Top = 2 });
 
         await foreach (var result in searchResults.Results)
@@ -140,6 +135,46 @@ class Program
             Console.WriteLine($"   链接: {result.Link}");
             Console.WriteLine();
         }
+
+        // 3. 元数据过滤 - 只搜索特定类别
+        Console.WriteLine("3. 元数据过滤 (Filter):");
+        var filter = new TextSearchFilter().Equality("Category", "tutorial");
+        var filterOptions = new TextSearchOptions { Filter = filter, Top = 3 };
+        Console.WriteLine("   搜索条件: Category = 'tutorial'\n");
+
+        var filteredResults = await textSearch.GetTextSearchResultsAsync(query, filterOptions);
+        await foreach (var result in filteredResults.Results)
+        {
+            Console.WriteLine($"   [{result.Name}]");
+            Console.WriteLine($"   {result.Value}");
+            Console.WriteLine();
+        }
+
+        // 4. 分页支持 - Top/Skip
+        Console.WriteLine("4. 分页支持 (Top/Skip):");
+
+        // 第一页
+        Console.WriteLine("   第 1 页 (Top=2, Skip=0):");
+        var page1 = await textSearch.GetTextSearchResultsAsync(
+            query,
+            new TextSearchOptions { Top = 2, Skip = 0 });
+
+        await foreach (var result in page1.Results)
+        {
+            Console.WriteLine($"      - {result.Name}");
+        }
+
+        // 第二页
+        Console.WriteLine("\n   第 2 页 (Top=2, Skip=2):");
+        var page2 = await textSearch.GetTextSearchResultsAsync(
+            query,
+            new TextSearchOptions { Top = 2, Skip = 2 });
+
+        await foreach (var result in page2.Results)
+        {
+            Console.WriteLine($"      - {result.Name}");
+        }
+        Console.WriteLine();
     }
 
     /// <summary>
@@ -172,64 +207,11 @@ class Program
     }
 
     /// <summary>
-    /// 示例 3: 元数据过滤
+    /// 示例 3: RAG 场景 - 搜索增强生成
     /// </summary>
-    static async Task Example3_TextSearchWithFiltering(ITextSearch textSearch)
+    static async Task Example3_RAGWithTextSearch(Kernel kernel, ITextSearch textSearch)
     {
-        Console.WriteLine("【示例 3】元数据过滤\n");
-
-        // 使用元数据过滤 - 只搜索特定类别
-        var filter = new TextSearchFilter().Equality("Category", "tutorial");
-        var options = new TextSearchOptions { Filter = filter, Top = 3 };
-
-        Console.WriteLine("搜索条件: Category = 'tutorial'\n");
-        var results = await textSearch.GetTextSearchResultsAsync("Semantic Kernel", options);
-
-        await foreach (var result in results.Results)
-        {
-            Console.WriteLine($"   [{result.Name}]");
-            Console.WriteLine($"   {result.Value}");
-            Console.WriteLine();
-        }
-    }
-
-    /// <summary>
-    /// 示例 4: 分页支持
-    /// </summary>
-    static async Task Example4_TextSearchWithPagination(ITextSearch textSearch)
-    {
-        Console.WriteLine("【示例 4】分页支持 (Top/Skip)\n");
-
-        // 第一页: Top=2, Skip=0
-        Console.WriteLine("第 1 页 (Top=2, Skip=0):");
-        var page1 = await textSearch.GetTextSearchResultsAsync(
-            "Semantic Kernel",
-            new TextSearchOptions { Top = 2, Skip = 0 });
-
-        await foreach (var result in page1.Results)
-        {
-            Console.WriteLine($"   - {result.Name}");
-        }
-
-        // 第二页: Top=2, Skip=2
-        Console.WriteLine("\n第 2 页 (Top=2, Skip=2):");
-        var page2 = await textSearch.GetTextSearchResultsAsync(
-            "Semantic Kernel",
-            new TextSearchOptions { Top = 2, Skip = 2 });
-
-        await foreach (var result in page2.Results)
-        {
-            Console.WriteLine($"   - {result.Name}");
-        }
-        Console.WriteLine();
-    }
-
-    /// <summary>
-    /// 示例 5: RAG 场景 - 搜索增强生成
-    /// </summary>
-    static async Task Example5_RAGWithTextSearch(Kernel kernel, ITextSearch textSearch)
-    {
-        Console.WriteLine("【示例 5】RAG 场景 - 搜索增强生成\n");
+        Console.WriteLine("【示例 3】RAG 场景 - 搜索增强生成\n");
 
         // 创建带引用的搜索插件（使用官方扩展方法）
         var searchPlugin = textSearch.CreateWithGetTextSearchResults("Search");
