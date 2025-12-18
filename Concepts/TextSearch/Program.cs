@@ -1,18 +1,20 @@
-#pragma warning disable SKEXP0001, SKEXP0050
+#pragma warning disable SKEXP0001, SKEXP0050, SKEXP0020
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
+using Microsoft.Extensions.VectorData;
+using Microsoft.Extensions.AI;
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
 using Common;
 
 namespace Concepts.TextSearch;
 
 /// <summary>
 /// TextSearch 插件核心概念
-/// 演示如何使用 ITextSearch 接口创建标准化的搜索插件
+/// 演示如何使用官方的 VectorStoreTextSearch 创建标准化的搜索插件
 /// </summary>
 class Program
 {
@@ -26,28 +28,37 @@ class Program
 
         try
         {
-            // 创建 Kernel
+            // 创建 Kernel 和 Embedding Generator
             var kernel = Settings.CreateKernelBuilder().Build();
+            var embeddingGenerator = Settings.CreateEmbeddingGenerator();
+
+            // 初始化向量存储和知识库
+            Console.WriteLine("正在初始化向量存储和知识库...");
+            var (vectorStore, collection) = await InitializeVectorStoreAsync(embeddingGenerator);
+            Console.WriteLine("✅ 知识库初始化完成\n");
+
+            // 创建 TextSearch 实例（官方实现）
+            var textSearch = new VectorStoreTextSearch<DataModel>(collection);
 
             // ===== 示例 1: 基础 TextSearch 使用 =====
-            await Example1_BasicTextSearch();
+            await Example1_BasicTextSearch(textSearch);
 
             // ===== 示例 2: TextSearch 插件与自动函数调用 =====
-            await Example2_TextSearchWithFunctionCalling(kernel);
+            await Example2_TextSearchWithFunctionCalling(kernel, textSearch);
 
             // ===== 示例 3: 元数据过滤 =====
-            await Example3_TextSearchWithFiltering();
+            await Example3_TextSearchWithFiltering(textSearch);
 
             // ===== 示例 4: 分页支持 =====
-            await Example4_TextSearchWithPagination();
+            await Example4_TextSearchWithPagination(textSearch);
 
             // ===== 示例 5: RAG 场景 - 搜索增强生成 =====
-            await Example5_RAGWithTextSearch(kernel);
+            await Example5_RAGWithTextSearch(kernel, textSearch);
 
             Console.WriteLine("\n✅ 所有示例完成!");
             Console.WriteLine("\n💡 提示:");
             Console.WriteLine("   - TextSearch 提供了统一的搜索抽象");
-            Console.WriteLine("   - 可以基于 Bing、Google、VectorStore 等实现");
+            Console.WriteLine("   - 官方提供了 VectorStoreTextSearch 实现");
             Console.WriteLine("   - 支持自动函数调用，LLM 决定何时搜索");
         }
         catch (Exception ex)
@@ -60,14 +71,53 @@ class Program
     }
 
     /// <summary>
+    /// 初始化向量存储和知识库
+    /// </summary>
+    static async Task<(InMemoryVectorStore, VectorStoreCollection<Guid, DataModel>)> InitializeVectorStoreAsync(
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+    {
+        // 创建 InMemory 向量存储
+        var vectorStore = new InMemoryVectorStore(new() { EmbeddingGenerator = embeddingGenerator });
+
+        // 获取集合
+        var collection = vectorStore.GetCollection<Guid, DataModel>("knowledge_base");
+        await collection.EnsureCollectionExistsAsync();
+
+        // 知识库数据
+        var knowledgeData = new[]
+        {
+            ("Semantic Kernel 简介", "Semantic Kernel 是微软开发的开源 AI 编排框架，用于将大语言模型集成到应用程序中。", "https://learn.microsoft.com/semantic-kernel/overview", "overview"),
+            ("插件系统", "Semantic Kernel 的插件系统允许你将自定义功能封装为可重用的组件，LLM 可以自动调用这些插件。", "https://learn.microsoft.com/semantic-kernel/concepts/plugins", "tutorial"),
+            ("提示模板", "提示模板支持参数化和动态内容生成，可以使用 Handlebars 或 Liquid 语法。", "https://learn.microsoft.com/semantic-kernel/prompts/templates", "tutorial"),
+            ("函数调用", "通过 FunctionChoiceBehavior.Auto() 启用自动函数调用，LLM 会自动决定何时调用哪些函数。", "https://learn.microsoft.com/semantic-kernel/concepts/function-calling", "tutorial"),
+            ("RAG 检索增强生成", "使用 TextSearch 插件可以轻松实现 RAG，将外部知识库集成到 LLM 的回答中。", "https://learn.microsoft.com/semantic-kernel/concepts/rag", "advanced"),
+            ("向量存储", "Semantic Kernel 支持多种向量数据库，如 Qdrant、Chroma、Pinecone、InMemory 等。", "https://learn.microsoft.com/semantic-kernel/concepts/vector-stores", "advanced"),
+        };
+
+        // 插入数据并生成向量
+        foreach (var (title, content, link, category) in knowledgeData)
+        {
+            var embedding = await embeddingGenerator.GenerateAsync(content);
+            var record = new DataModel
+            {
+                Key = Guid.NewGuid(),
+                Title = title,
+                Content = content,
+                Link = link,
+                Category = category
+            };
+            await collection.UpsertAsync(record);
+        }
+
+        return (vectorStore, collection);
+    }
+
+    /// <summary>
     /// 示例 1: 基础 TextSearch 使用
     /// </summary>
-    static async Task Example1_BasicTextSearch()
+    static async Task Example1_BasicTextSearch(ITextSearch textSearch)
     {
         Console.WriteLine("【示例 1】基础 TextSearch 使用\n");
-
-        // 创建一个基于内存的 TextSearch 实现
-        var textSearch = new InMemoryTextSearch();
 
         // 1. 简单搜索 - 返回字符串结果
         Console.WriteLine("1. 简单搜索 (SearchAsync):");
@@ -95,14 +145,11 @@ class Program
     /// <summary>
     /// 示例 2: TextSearch 插件与自动函数调用
     /// </summary>
-    static async Task Example2_TextSearchWithFunctionCalling(Kernel kernel)
+    static async Task Example2_TextSearchWithFunctionCalling(Kernel kernel, ITextSearch textSearch)
     {
         Console.WriteLine("【示例 2】TextSearch 插件与自动函数调用\n");
 
-        // 创建 TextSearch 实例
-        var textSearch = new InMemoryTextSearch();
-
-        // 将 TextSearch 转换为 Kernel 插件
+        // 将 TextSearch 转换为 Kernel 插件（使用官方扩展方法）
         var searchPlugin = textSearch.CreateWithSearch("KnowledgeBase");
         kernel.Plugins.Add(searchPlugin);
 
@@ -127,17 +174,15 @@ class Program
     /// <summary>
     /// 示例 3: 元数据过滤
     /// </summary>
-    static async Task Example3_TextSearchWithFiltering()
+    static async Task Example3_TextSearchWithFiltering(ITextSearch textSearch)
     {
         Console.WriteLine("【示例 3】元数据过滤\n");
 
-        var textSearch = new InMemoryTextSearch();
-
         // 使用元数据过滤 - 只搜索特定类别
-        var filter = new TextSearchFilter().Equality("category", "tutorial");
+        var filter = new TextSearchFilter().Equality("Category", "tutorial");
         var options = new TextSearchOptions { Filter = filter, Top = 3 };
 
-        Console.WriteLine("搜索条件: category = 'tutorial'\n");
+        Console.WriteLine("搜索条件: Category = 'tutorial'\n");
         var results = await textSearch.GetTextSearchResultsAsync("Semantic Kernel", options);
 
         await foreach (var result in results.Results)
@@ -151,11 +196,9 @@ class Program
     /// <summary>
     /// 示例 4: 分页支持
     /// </summary>
-    static async Task Example4_TextSearchWithPagination()
+    static async Task Example4_TextSearchWithPagination(ITextSearch textSearch)
     {
         Console.WriteLine("【示例 4】分页支持 (Top/Skip)\n");
-
-        var textSearch = new InMemoryTextSearch();
 
         // 第一页: Top=2, Skip=0
         Console.WriteLine("第 1 页 (Top=2, Skip=0):");
@@ -184,13 +227,11 @@ class Program
     /// <summary>
     /// 示例 5: RAG 场景 - 搜索增强生成
     /// </summary>
-    static async Task Example5_RAGWithTextSearch(Kernel kernel)
+    static async Task Example5_RAGWithTextSearch(Kernel kernel, ITextSearch textSearch)
     {
         Console.WriteLine("【示例 5】RAG 场景 - 搜索增强生成\n");
 
-        var textSearch = new InMemoryTextSearch();
-
-        // 创建带引用的搜索插件
+        // 创建带引用的搜索插件（使用官方扩展方法）
         var searchPlugin = textSearch.CreateWithGetTextSearchResults("Search");
         kernel.Plugins.Add(searchPlugin);
 
@@ -234,204 +275,31 @@ class Program
 }
 
 /// <summary>
-/// 基于内存的 TextSearch 实现
-/// 模拟真实的搜索服务（如 Bing、Google、VectorStore）
+/// 数据模型 - 用于向量存储
 /// </summary>
-public class InMemoryTextSearch : ITextSearch
+/// <remarks>
+/// 使用特性标注来指定如何映射到 TextSearchResult
+/// </remarks>
+public sealed class DataModel
 {
-    // 模拟知识库数据
-    private readonly List<KnowledgeItem> _knowledgeBase = new()
-    {
-        new("Semantic Kernel 简介",
-            "Semantic Kernel 是微软开发的开源 AI 编排框架，用于将大语言模型集成到应用程序中。",
-            "https://learn.microsoft.com/semantic-kernel/overview",
-            "overview"),
+    [VectorStoreKey]
+    public Guid Key { get; init; }
 
-        new("插件系统",
-            "Semantic Kernel 的插件系统允许你将自定义功能封装为可重用的组件，LLM 可以自动调用这些插件。",
-            "https://learn.microsoft.com/semantic-kernel/concepts/plugins",
-            "tutorial"),
+    [VectorStoreData]
+    [TextSearchResultName]
+    public string Title { get; init; } = string.Empty;
 
-        new("提示模板",
-            "提示模板支持参数化和动态内容生成，可以使用 Handlebars 或 Liquid 语法。",
-            "https://learn.microsoft.com/semantic-kernel/prompts/templates",
-            "tutorial"),
+    [VectorStoreData]
+    [TextSearchResultValue]
+    public string Content { get; init; } = string.Empty;
 
-        new("函数调用",
-            "通过 FunctionChoiceBehavior.Auto() 启用自动函数调用，LLM 会自动决定何时调用哪些函数。",
-            "https://learn.microsoft.com/semantic-kernel/concepts/function-calling",
-            "tutorial"),
+    [VectorStoreData]
+    [TextSearchResultLink]
+    public string Link { get; init; } = string.Empty;
 
-        new("RAG 检索增强生成",
-            "使用 TextSearch 插件可以轻松实现 RAG，将外部知识库集成到 LLM 的回答中。",
-            "https://learn.microsoft.com/semantic-kernel/concepts/rag",
-            "advanced"),
+    [VectorStoreData(IsIndexed = true)]
+    public string Category { get; init; } = string.Empty;
 
-        new("向量存储",
-            "Semantic Kernel 支持多种向量数据库，如 Qdrant、Chroma、Pinecone 等。",
-            "https://learn.microsoft.com/semantic-kernel/concepts/vector-stores",
-            "advanced"),
-    };
-
-    /// <summary>
-    /// 简单搜索 - 返回字符串结果
-    /// </summary>
-    public Task<KernelSearchResults<string>> SearchAsync(
-        string query,
-        TextSearchOptions? searchOptions = null,
-        CancellationToken cancellationToken = default)
-    {
-        var results = PerformSearch(query, searchOptions)
-            .Select(item => $"{item.Title}: {item.Content}");
-
-        return Task.FromResult(
-            new KernelSearchResults<string>(results.ToAsyncEnumerable()));
-    }
-
-    /// <summary>
-    /// 结构化搜索 - 返回 TextSearchResult
-    /// </summary>
-    public Task<KernelSearchResults<TextSearchResult>> GetTextSearchResultsAsync(
-        string query,
-        TextSearchOptions? searchOptions = null,
-        CancellationToken cancellationToken = default)
-    {
-        var results = PerformSearch(query, searchOptions)
-            .Select(item => new TextSearchResult(item.Content)
-            {
-                Name = item.Title,
-                Link = item.Link
-            });
-
-        return Task.FromResult(
-            new KernelSearchResults<TextSearchResult>(results.ToAsyncEnumerable()));
-    }
-
-    /// <summary>
-    /// 原始对象搜索 - 返回 KnowledgeItem
-    /// </summary>
-    public Task<KernelSearchResults<object>> GetSearchResultsAsync(
-        string query,
-        TextSearchOptions? searchOptions = null,
-        CancellationToken cancellationToken = default)
-    {
-        var results = PerformSearch(query, searchOptions)
-            .Cast<object>();
-
-        return Task.FromResult(
-            new KernelSearchResults<object>(results.ToAsyncEnumerable()));
-    }
-
-    /// <summary>
-    /// 执行搜索逻辑（支持过滤和分页）
-    /// </summary>
-    private IEnumerable<KnowledgeItem> PerformSearch(string query, TextSearchOptions? options)
-    {
-        var results = _knowledgeBase.AsEnumerable();
-
-        // 简单的关键词匹配
-        if (!string.IsNullOrWhiteSpace(query))
-        {
-            results = results.Where(item =>
-                item.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                item.Content.Contains(query, StringComparison.OrdinalIgnoreCase));
-        }
-
-        // 元数据过滤
-        if (options?.Filter != null)
-        {
-            // 简化实现：只支持 category 过滤
-            var filterValue = ExtractFilterValue(options.Filter);
-            if (!string.IsNullOrEmpty(filterValue))
-            {
-                results = results.Where(item => item.Category == filterValue);
-            }
-        }
-
-        // 分页
-        if (options?.Skip > 0)
-        {
-            results = results.Skip(options.Skip);
-        }
-
-        if (options?.Top > 0)
-        {
-            results = results.Take(options.Top);
-        }
-
-        return results.ToList();
-    }
-
-    /// <summary>
-    /// 从过滤器中提取值（简化实现）
-    /// </summary>
-    private string? ExtractFilterValue(TextSearchFilter filter)
-    {
-        // 这是一个简化的实现
-        // 实际应该解析 filter 的 FilterClauses
-        return "tutorial"; // 示例中硬编码
-    }
-
-    /// <summary>
-    /// 知识库条目
-    /// </summary>
-    private record KnowledgeItem(string Title, string Content, string Link, string Category);
-}
-
-/// <summary>
-/// TextSearch 扩展方法
-/// 将 ITextSearch 转换为 KernelPlugin
-/// </summary>
-public static class TextSearchExtensions
-{
-    /// <summary>
-    /// 创建简单搜索插件
-    /// </summary>
-    public static KernelPlugin CreateWithSearch(
-        this ITextSearch textSearch,
-        string pluginName)
-    {
-        var function = KernelFunctionFactory.CreateFromMethod(
-            async ([Description("搜索查询")] string query) =>
-            {
-                var results = await textSearch.SearchAsync(query, new TextSearchOptions { Top = 3 });
-                var resultList = new List<string>();
-                await foreach (var result in results.Results)
-                {
-                    resultList.Add(result);
-                }
-                return string.Join("\n\n", resultList);
-            },
-            functionName: "Search",
-            description: "在知识库中搜索相关信息");
-
-        return KernelPluginFactory.CreateFromFunctions(pluginName, functions: [function]);
-    }
-
-    /// <summary>
-    /// 创建带引用的搜索插件
-    /// </summary>
-    public static KernelPlugin CreateWithGetTextSearchResults(
-        this ITextSearch textSearch,
-        string pluginName)
-    {
-        var function = KernelFunctionFactory.CreateFromMethod(
-            async ([Description("搜索查询")] string query) =>
-            {
-                var results = await textSearch.GetTextSearchResultsAsync(
-                    query,
-                    new TextSearchOptions { Top = 3 });
-
-                var resultList = new List<TextSearchResult>();
-                await foreach (var result in results.Results)
-                {
-                    resultList.Add(result);
-                }
-                return resultList;
-            },
-            functionName: "GetTextSearchResults",
-            description: "在知识库中搜索相关信息并返回详细结果");
-
-        return KernelPluginFactory.CreateFromFunctions(pluginName, functions: [function]);
-    }
+    [VectorStoreVector(1536)]
+    public string Embedding => Content;
 }
