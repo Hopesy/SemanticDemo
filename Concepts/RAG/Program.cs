@@ -9,11 +9,7 @@ using Common;
 using Qdrant.Client;
 
 namespace Concepts.RAG;
-
-/// <summary>
-/// 真实的 RAG (检索增强生成) 系统 + 语义缓存
-/// 使用 VectorStore 抽象层统一管理向量数据库
-/// </summary>
+// 真实的 RAG (检索增强生成) 系统 + 语义缓存,使用 VectorStore 抽象层统一管理向量数据库
 class Program
 {
     private const string KnowledgeCollectionName = "knowledge_base";
@@ -25,51 +21,42 @@ class Program
     {
         Console.WriteLine("=== 真实的 RAG 系统 + 语义缓存 (使用 VectorStore 抽象层) ===\n");
         Console.WriteLine("📋 前置条件:");
-        Console.WriteLine("   请确保 Qdrant 向量数据库已启动:");
-        Console.WriteLine("   docker run -p 6333:6333 qdrant/qdrant\n");
+        Console.WriteLine("请确保 Qdrant 向量数据库已启动:");
+        Console.WriteLine("docker run -p 6333:6333 qdrant/qdrant\n");
 
         try
         {
-            // 1. 创建 Kernel 和 EmbeddingGenerator
+            // 1. 创建Kernel和EmbeddingGenerator
             var kernel = Settings.CreateKernelBuilder().Build();
+            // 【聊天服务】ChatCompletionService
             var chatService = kernel.GetRequiredService<IChatCompletionService>();
-
-            // 使用最新的 Microsoft.Extensions.AI API
+            // 【向量服务】使用最新的 Microsoft.Extensions.AI API
             var embeddingGenerator = Settings.CreateEmbeddingGenerator();
-
             // 2. 连接 Qdrant 并创建 VectorStore
             Console.WriteLine("📡 连接 Qdrant 向量数据库...");
             var qdrantClient = new QdrantClient(QdrantEndpoint);
             var vectorStore = new QdrantVectorStore(qdrantClient, ownsClient: true);
-
             // 3. 获取集合 (使用 VectorStore 抽象)
             var knowledgeCollection = vectorStore.GetCollection<Guid, KnowledgeEntry>(KnowledgeCollectionName);
             var cacheCollection = vectorStore.GetCollection<Guid, CacheEntry>(CacheCollectionName);
-
             // 4. 初始化集合
             await knowledgeCollection.EnsureCollectionExistsAsync();
             await cacheCollection.EnsureCollectionExistsAsync();
-            Console.WriteLine($"   ✅ 已连接到知识库集合: {KnowledgeCollectionName}");
+            Console.WriteLine($"✅ 已连接到知识库集合: {KnowledgeCollectionName}");
             Console.WriteLine($"   ✅ 已连接到语义缓存集合: {CacheCollectionName}\n");
 
             // 创建缓存服务
             var cacheService = new SemanticCacheService(cacheCollection, embeddingGenerator);
-
             // ===== 示例 1: 构建知识库 =====
             await Example1_BuildKnowledgeBase(knowledgeCollection, embeddingGenerator);
-
             // ===== 示例 2: 语义搜索 =====
             await Example2_SemanticSearch(knowledgeCollection, embeddingGenerator);
-
             // ===== 示例 3: RAG 问答(不使用缓存) =====
             await Example3_RealRAG(knowledgeCollection, embeddingGenerator, chatService);
-
             // ===== 示例 4: RAG + 语义缓存 =====
             await Example4_RAGWithSemanticCache(knowledgeCollection, embeddingGenerator, chatService, cacheService);
-
             // ===== 示例 5: 缓存统计分析 =====
             await Example5_CacheAnalytics(cacheService);
-
             Console.WriteLine("\n✅ 所有示例完成!");
         }
         catch (Exception ex)
@@ -95,7 +82,6 @@ class Program
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
     {
         Console.WriteLine("【示例 1】构建知识库 (使用 VectorStore 抽象层)\n");
-
         // 企业产品知识库
         var knowledgeData = new Dictionary<string, string>
         {
@@ -106,15 +92,12 @@ class Program
             ["运动模式"] = "内置100+种运动模式,包括跑步、骑行、游泳、登山、瑜伽、球类运动等,并提供专业运动数据分析。",
             ["售后保修"] = "产品提供1年免费保修服务,支持7天无理由退换货,终身技术支持。非人为损坏免费维修。"
         };
-
         Console.WriteLine("正在生成向量并存储到 VectorStore...");
-
         var entries = new List<KnowledgeEntry>();
         foreach (var (category, text) in knowledgeData)
         {
             // 生成文本的向量嵌入
             var embeddingResult = await embeddingGenerator.GenerateAsync(text);
-
             // 创建 VectorStore 记录
             var entry = new KnowledgeEntry
             {
@@ -123,14 +106,11 @@ class Program
                 Category = category,
                 Vector = embeddingResult.Vector
             };
-
             entries.Add(entry);
             Console.WriteLine($"   ✅ 已准备: {category}");
         }
-
         // 使用 VectorStore 统一接口批量存储
         await collection.UpsertAsync(entries);
-
         Console.WriteLine($"\n✅ 共存储 {knowledgeData.Count} 条知识到向量数据库\n");
     }
 
@@ -142,13 +122,11 @@ class Program
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
     {
         Console.WriteLine("【示例 2】真实的语义搜索 (VectorStore)\n");
-
         string query = "这款手表能用多长时间?";
         Console.WriteLine($"🔍 用户查询: {query}\n");
 
         // 生成查询的向量
         var queryEmbeddingResult = await embeddingGenerator.GenerateAsync(query);
-
         // 使用 VectorStore 统一的向量搜索接口
         Console.WriteLine("正在向量数据库中搜索...");
         var searchResults = await collection.SearchAsync(
@@ -186,14 +164,11 @@ class Program
         // 使用 VectorStore 执行 RAG
         Console.WriteLine("步骤 1: 从知识库检索相关信息...");
         var answer = await ExecuteRAG(collection, embeddingGenerator, chatService, question);
-
         var duration = (DateTime.Now - startTime).TotalMilliseconds;
-
         Console.WriteLine("🤖 AI 回答:");
         Console.WriteLine($"{answer}");
         Console.WriteLine($"\n⏱️  总耗时: {duration:F0} ms\n");
     }
-
     /// <summary>
     /// 示例 4: RAG + 语义缓存 (使用 VectorStore)
     /// </summary>
@@ -367,16 +342,13 @@ public class SemanticCacheService
 {
     private const float SimilarityThreshold = 0.95f;
     private const decimal CostPerRequest = 0.002m;
-
     private readonly VectorStoreCollection<Guid, CacheEntry> _cacheCollection;
     private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerator;
-
     // 统计数据
     private int _cacheHits = 0;
     private int _cacheMisses = 0;
     private List<long> _cacheResponseTimes = new();
     private List<long> _fullRAGResponseTimes = new();
-
     public SemanticCacheService(
         VectorStoreCollection<Guid, CacheEntry> cacheCollection,
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)

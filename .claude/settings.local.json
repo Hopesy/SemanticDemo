@@ -20,7 +20,15 @@
       "Bash(dotnet clean:*)",
       "Bash(dotnet list:*)",
       "WebFetch(domain:jina.ai)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(del:*)",
+      "Bash(rm:*)",
+      "Bash(timeout 30 dotnet run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n添加 TextSearch 插件示例项目\n\n本次提交新增了完整的 TextSearch 插件示例，展示了 Semantic Kernel 中用于 RAG 的标准化搜索模块。\n\n## 新增内容\n\n### Concepts/TextSearch 项目\n- **示例 1**: 基础 TextSearch 使用（SearchAsync 和 GetTextSearchResultsAsync）\n- **示例 2**: TextSearch 插件与自动函数调用（LLM 自动决定何时搜索）\n- **示例 3**: 元数据过滤（基于 category 过滤搜索结果）\n- **示例 4**: 分页支持（Top/Skip 参数）\n- **示例 5**: RAG 场景 - 搜索增强生成（使用 Handlebars 模板）\n\n### 核心特性\n- 实现了 ITextSearch 接口的内存搜索示例\n- 展示了如何将 TextSearch 转换为 Kernel 插件\n- 支持元数据过滤和分页\n- 集成 Handlebars 模板引擎用于 RAG 场景\n- 包含 6 个预定义的知识库条目\n\n### 技术栈\n- Microsoft.SemanticKernel 1.68.0\n- Microsoft.Extensions.VectorData.Abstractions 9.7.0\n- Microsoft.SemanticKernel.PromptTemplates.Handlebars 1.68.0\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(timeout 60 dotnet run:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\n重构 TextSearch 示例：使用官方 VectorStoreTextSearch 实现\n\n## 主要变更\n\n### 移除自定义实现\n- 删除了自定义的 InMemoryTextSearch 类\n- 删除了自定义的 TextSearchExtensions 扩展方法\n\n### 使用官方实现\n- 使用官方的 `VectorStoreTextSearch<TRecord>` 类\n- 使用官方的 `InMemoryVectorStore` 向量存储\n- 使用官方的扩展方法 `CreateWithSearch\\(\\)` 和 `CreateWithGetTextSearchResults\\(\\)`\n\n### 数据模型改进\n- 使用 `[VectorStoreKey]`、`[VectorStoreData]` 等特性标注\n- 使用 `[TextSearchResultName]`、`[TextSearchResultValue]`、`[TextSearchResultLink]` 映射到 TextSearchResult\n- 支持 `[VectorStoreVector]` 自动向量化\n\n### 依赖包更新\n- 添加 `Microsoft.SemanticKernel.Connectors.InMemory` 1.68.0-preview\n\n## 功能保持不变\n- 5 个示例全部正常工作\n- 支持基础搜索、自动函数调用、元数据过滤、分页、RAG 场景\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)"
     ]
   }
 }
