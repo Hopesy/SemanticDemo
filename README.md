@@ -10,7 +10,8 @@ SemanticDemo/
 │   ├── Settings.cs             # 统一的配置管理
 │   └── PromptPlugins/          # 提示模板插件库（50+ 预定义插件）
 ├── Starts/                      # 入门教程（5个项目）
-└── Concepts/                    # 核心概念（13个项目）
+├── Concepts/                    # 核心概念（11个项目）
+└── Advances/                    # 高级应用（3个项目）
 ```
 
 ## 🚀 快速开始
@@ -181,11 +182,10 @@ dotnet run
 |------|---------|---------|---------|------|
 | 9 | **Memory** | 记忆系统 | Text Embedding、向量存储、语义搜索 | ⭐⭐⭐ |
 | 10 | **RAG** | 检索增强生成 | 知识库、向量检索、上下文注入 | ⭐⭐⭐⭐ |
-| 11 | **HybridSearch** | 混合检索与重排序 | 向量搜索、关键词搜索、RRF 算法 | ⭐⭐⭐⭐ |
-| 12 | **Search** | 搜索集成 | Web 搜索、多来源搜索、搜索增强对话 | ⭐⭐⭐ |
-| 13 | **Agents** | AI 代理 | ChatCompletionAgent、多轮对话、带插件的 Agent | ⭐⭐⭐⭐ |
+| 11 | **Search** | 搜索集成 | Web 搜索、多来源搜索、搜索增强对话 | ⭐⭐⭐ |
+| 12 | **Agents** | AI 代理 | ChatCompletionAgent、多轮对话、带插件的 Agent | ⭐⭐⭐⭐ |
 
-> **重要提示**：Memory、RAG、HybridSearch 项目需要配置 **Embedding 服务**。推荐使用：
+> **重要提示**：Memory、RAG 项目需要配置 **Embedding 服务**。推荐使用：
 > - **Ollama**（本地免费）：配置 `nomic-embed-text` 模型（768 维）
 > - **智谱 AI**（国内可用）：配置 `embedding-2` 模型（1024 维）
 > - **OpenAI**（需国际访问）：配置 `text-embedding-3-small` 或 `text-embedding-ada-002`（1536 维）
@@ -193,6 +193,27 @@ dotnet run
 > 注意：向量维度必须与配置文件中的 `dimensions` 参数匹配！
 
 **学习目标：** 构建智能应用，实现 RAG、Agent 等高级 AI 模式。
+
+---
+
+### 阶段 3：高级应用（Advances 目录）
+
+这些项目需要较强的技术基础，建议完成 Concepts 学习后再开始：
+
+| 序号 | 项目名称 | 学习内容 | 关键概念 | 难度 |
+|------|---------|---------|---------|------|
+| 1 | **TextSearch** | 标准化搜索模块 | VectorStoreTextSearch、TextSearch 插件、RAG 集成 | ⭐⭐⭐⭐ |
+| 2 | **HybridSearch** | 混合检索与重排序 | 向量搜索、关键词搜索、RRF 算法、Qdrant | ⭐⭐⭐⭐⭐ |
+| 3 | **OrderProcessWorkflow** | 工作流示例 | 多步骤任务编排、状态管理 | ⭐⭐⭐⭐ |
+
+> **重要提示**：
+> - **TextSearch** 和 **HybridSearch** 需要配置 Embedding 服务（同 Memory/RAG）
+> - **HybridSearch** 需要运行 Qdrant Docker 容器：
+>   ```bash
+>   docker run -d -p 6333:6333 -p 6334:6334 --name qdrant-hybridsearch qdrant/qdrant
+>   ```
+
+**学习目标：** 掌握企业级 AI 应用的高级模式和最佳实践。
 
 ---
 
@@ -223,7 +244,10 @@ Plugins → FunctionCallingAdvanced → PromptTemplates
 DependencyInjection → Filtering
 
 【智能应用】
-Memory → RAG → HybridSearch → Search → Agents
+Memory → RAG → Search → Agents
+
+【高级应用】
+TextSearch → HybridSearch → OrderProcessWorkflow
 ```
 
 ### 实战路径（针对特定场景）
@@ -236,7 +260,7 @@ GettingStarted → ChatCompletion → KernelArgumentsChat
 
 **场景 2：构建知识库问答系统（RAG）**
 ```
-GettingStarted → ChatCompletion → Memory → RAG → HybridSearch
+GettingStarted → ChatCompletion → Memory → RAG → TextSearch → HybridSearch
 ```
 
 **场景 3：构建企业级应用**
@@ -303,14 +327,24 @@ GettingStarted → DependencyInjection → Filtering
 - **作用**：结合知识库和 AI 生成，提供准确答案
 - **流程**：检索相关文档 → 注入上下文 → AI 生成答案
 
+### Agent（代理）
+- **作用**：具有自主决策能力的 AI 助手
+- **特点**：多轮对话、自动调用工具、任务规划
+
+---
+
+## 🚀 高级特性速查（Advances 目录）
+
+### TextSearch（标准化搜索）
+- **作用**：Semantic Kernel 中用于 RAG 的标准化搜索模块
+- **核心**：VectorStoreTextSearch、自动函数调用、元数据过滤
+- **应用**：将检索封装为标准 SK 插件，LLM 自动决定何时搜索
+
 ### HybridSearch（混合检索）
 - **作用**：结合向量搜索和关键词搜索，提升检索准确率
 - **核心**：RRF（Reciprocal Rank Fusion）重排序算法
 - **优势**：语义理解 + 精确匹配，适合企业级搜索应用
-
-### Agent（代理）
-- **作用**：具有自主决策能力的 AI 助手
-- **特点**：多轮对话、自动调用工具、任务规划
+- **依赖**：需要 Qdrant 向量数据库（Docker 运行）
 
 ---
 
