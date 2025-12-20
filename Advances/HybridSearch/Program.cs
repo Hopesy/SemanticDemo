@@ -1,49 +1,42 @@
 using Common;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
+using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.Qdrant;
 using Qdrant.Client;
+using System.Text.RegularExpressions;
+/*
+  1. 使用 LLM 智能提取关键词（提高准确率）
+  2. 启用元数据过滤（如权限、分类、时间范围）
+  3. 实现分页（避免一次返回大量结果）
+  4. 缓存常见查询的关键词（减少 LLM 调用）
+  5. 监控 RRF 评分分布（优化权重配置）
+*/
 
-#pragma warning disable SKEXP0001, SKEXP0010, SKEXP0020, SKEXP0050, SKEXP0070
+Console.WriteLine("=== Semantic Kernel 混合检索（Hybrid Search）综合示例 ===\n");
 
-Console.WriteLine("=== Semantic Kernel 混合检索（Hybrid Search）与 RRF 重排序示例 ===\n");
-
-// 创建Embedding生成器(本案例使用的是ollama本地运行的嵌入模型nomic-embed-text)
-// 确保已安装ollama并下载nomic-embed-text模型,并且ollama客户端运行中
+// 创建 Kernel（用于 LLM 关键词提取）
+var kernel = Settings.CreateKernelBuilder().Build();
+// 创建 Embedding 生成器
 var embeddingGenerator = Settings.CreateEmbeddingGenerator();
-
-// 创建Qdrant客户端（连接到本地Qdrant服务器）先启动docker容器
-// docker run -d -p 6333:6333 -p 6334:6334 --name qdrant-hybridsearch qdrant/qdrant
+// 创建 Qdrant 客户端（连接到本地 Qdrant 服务器）
+// 先启动 docker 容器：docker run -d -p 6333:6333 -p 6334:6334 --name qdrant-hybridsearch qdrant/qdrant
 var qdrantClient = new QdrantClient("localhost", 6334, https: false);
-// 创建 Qdrant 向量存储
 var vectorStore = new QdrantVectorStore(qdrantClient, ownsClient: false);
 // 初始化知识库数据
 await InitializeKnowledgeBase(vectorStore, embeddingGenerator);
-// 示例 1: 基础混合检索
-await Example1_BasicHybridSearch(vectorStore, embeddingGenerator);
-// 示例 2: 对比纯向量搜索 vs 混合检索
-await Example2_VectorVsHybridSearch(vectorStore, embeddingGenerator);
-// 示例 3: 带过滤器的混合检索
-await Example3_HybridSearchWithFilter(vectorStore, embeddingGenerator);
-// 示例 4: 分页支持
-await Example4_HybridSearchPaging(vectorStore, embeddingGenerator);
-// 示例 5: RRF 评分解析
-await Example5_UnderstandingRRFScore(vectorStore, embeddingGenerator);
+// 运行综合示例
+await ComprehensiveHybridSearchExample(kernel, vectorStore, embeddingGenerator);
 Console.WriteLine("\n按任意键退出...");
 Console.ReadKey();
-/// <summary>
 /// 初始化知识库数据
-/// </summary>
 static async Task InitializeKnowledgeBase(
     QdrantVectorStore vectorStore,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
 {
-    Console.WriteLine("📚 正在初始化知识库数据...\n");
-
-    // 获取集合（如果不存在会自动创建）
+    Console.WriteLine("正在初始化知识库数据...\n");
     var collection = vectorStore.GetCollection<Guid, TechDocument>("tech_docs");
     await collection.EnsureCollectionExistsAsync();
-
     // 技术文档数据集
     var documents = new[]
     {
@@ -140,347 +133,205 @@ static async Task InitializeKnowledgeBase(
     Console.WriteLine($"✅ 已加载 {documents.Length} 个文档到知识库\n");
 }
 
-/// <summary>
-/// 示例 1: 基础混合检索
-/// </summary>
-static async Task Example1_BasicHybridSearch(
-    QdrantVectorStore vectorStore,
-    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+/// 综合混合检索示例 - 展示所有核心功能
+static async Task ComprehensiveHybridSearchExample(Kernel kernel, QdrantVectorStore vectorStore, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
 {
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    Console.WriteLine("示例 1: 基础混合检索（向量搜索 + 关键词搜索）");
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
+    Console.WriteLine("混合检索（Hybrid Search）综合演示");
     var collection = vectorStore.GetCollection<Guid, TechDocument>("tech_docs");
-
-    // 转换为混合检索接口
     var hybridSearchCollection = (IKeywordHybridSearchable<TechDocument>)collection;
-
-    // 查询：搜索关于"搜索"的技术
+    // 用户查询
     string query = "如何实现高效的搜索功能";
-    Console.WriteLine($"🔍 查询: {query}");
-
+    Console.WriteLine($"🔍 用户查询: {query}\n");
     // 生成查询向量
     var queryEmbedding = await embeddingGenerator.GenerateAsync(query);
+    // ========== 1. 智能关键词提取 ==========
+    Console.WriteLine("【步骤 1】智能关键词提取");
+    var keywords = await ExtractKeywordsWithLLM(kernel, query);
+    Console.WriteLine($"✓AI提取关键词: {string.Join(", ", keywords)}\n");
+    // ========== 2. 对比三种搜索方式 ==========
+    Console.WriteLine("【步骤 2】对比三种搜索方式\n");
+    // 2.1 纯向量搜索
+    Console.WriteLine("方式1：纯向量搜索（仅语义）");
+    var vectorResults = await collection.SearchAsync(queryEmbedding.Vector, top: 3).ToListAsync();
+    DisplayResults(vectorResults);
 
-    // 执行混合检索：结合向量搜索和关键词"搜索"、"检索"
-    var results = await hybridSearchCollection.HybridSearchAsync(
-        queryEmbedding.Vector,
-        keywords: new[] { "搜索", "检索" },
+    // 2.2 纯关键词搜索（模拟全文搜索）
+    Console.WriteLine("方式2：纯关键词搜索（仅精确匹配）");
+    var keywordResults = await hybridSearchCollection.HybridSearchAsync(
+        new ReadOnlyMemory<float>(new float[768]), // 空向量
+        keywords: keywords,
         top: 3
     ).ToListAsync();
-
-    Console.WriteLine($"\n📊 混合检索结果（Top 3）:\n");
-
-    int index = 1;
-    foreach (var result in results)
-    {
-        Console.WriteLine($"  {index}. {result.Record.Title}");
-        Console.WriteLine($"     分类: {result.Record.Category}");
-        Console.WriteLine($"     RRF 评分: {result.Score:F4}");
-        Console.WriteLine($"     标签: {string.Join(", ", result.Record.Tags)}");
-        Console.WriteLine($"     摘要: {result.Record.Content[..Math.Min(50, result.Record.Content.Length)]}...");
-        Console.WriteLine();
-        index++;
-    }
-}
-
-/// <summary>
-/// 示例 2: 对比纯向量搜索 vs 混合检索
-/// </summary>
-static async Task Example2_VectorVsHybridSearch(
-    QdrantVectorStore vectorStore,
-    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
-{
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    Console.WriteLine("示例 2: 对比纯向量搜索 vs 混合检索");
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
-    var collection = vectorStore.GetCollection<Guid, TechDocument>("tech_docs");
-    var hybridSearchCollection = (IKeywordHybridSearchable<TechDocument>)collection;
-
-    // 查询：包含特定术语"RRF"
-    string query = "RRF 算法的工作原理";
-    Console.WriteLine($"🔍 查询: {query}");
-    Console.WriteLine("   特点: 包含专有术语 'RRF'\n");
-
-    var queryEmbedding = await embeddingGenerator.GenerateAsync(query);
-
-    // 1. 纯向量搜索（仅语义相似度）
-    Console.WriteLine("📍 方法 1: 纯向量搜索（语义匹配）");
-    var vectorResults = await collection.SearchAsync(
-        queryEmbedding.Vector,
-        top: 3
-    ).ToListAsync();
-
-    Console.WriteLine("   结果:");
-    int vectorIndex = 1;
-    foreach (var result in vectorResults)
-    {
-        Console.WriteLine($"   {vectorIndex}. {result.Record.Title} (评分: {result.Score:F4})");
-        vectorIndex++;
-    }
-
-    // 2. 混合检索（语义 + 关键词"RRF"）
-    Console.WriteLine("\n📍 方法 2: 混合检索（语义 + 关键词 'RRF'）");
+    DisplayResults(keywordResults);
+    // 2.3 混合检索（推荐）
+    Console.WriteLine("方式3：混合检索（语义 + 精确匹配）⭐ 推荐");
     var hybridResults = await hybridSearchCollection.HybridSearchAsync(
         queryEmbedding.Vector,
-        keywords: new[] { "RRF" },
+        keywords: keywords,
         top: 3
     ).ToListAsync();
-
-    Console.WriteLine("   结果:");
-    int hybridIndex = 1;
-    foreach (var result in hybridResults)
-    {
-        Console.WriteLine($"   {hybridIndex}. {result.Record.Title} (评分: {result.Score:F4})");
-        hybridIndex++;
-    }
-
-    Console.WriteLine("\n💡 对比分析:");
-    Console.WriteLine("   - 纯向量搜索: 依赖语义理解，可能忽略精确关键词");
-    Console.WriteLine("   - 混合检索: 结合语义和关键词，更准确地找到包含 'RRF' 的文档");
-    Console.WriteLine();
-}
-
-/// <summary>
-/// 示例 3: 带过滤器的混合检索
-/// </summary>
-static async Task Example3_HybridSearchWithFilter(
-    QdrantVectorStore vectorStore,
-    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
-{
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    Console.WriteLine("示例 3: 带过滤器的混合检索");
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
-    var collection = vectorStore.GetCollection<Guid, TechDocument>("tech_docs");
-    var hybridSearchCollection = (IKeywordHybridSearchable<TechDocument>)collection;
-
-    string query = "搜索技术";
-    Console.WriteLine($"🔍 查询: {query}");
-    Console.WriteLine($"🔧 过滤器: Category == '算法'\n");
-
-    var queryEmbedding = await embeddingGenerator.GenerateAsync(query);
-
-    // 使用过滤器限制只搜索"算法"分类的文档
-    var results = await hybridSearchCollection.HybridSearchAsync(
+    DisplayResults(hybridResults);
+    Console.WriteLine("💡结论: 混合检索结合了语义理解和精确匹配，效果最好！\n");
+    // ========== 3. 高级特性演示 ==========
+    Console.WriteLine("【步骤 3】高级特性\n");
+    // 3.1 带过滤器的混合检索
+    Console.WriteLine("特性1-元数据过滤（只搜索'算法'分类）");
+    var filteredResults = await hybridSearchCollection.HybridSearchAsync(
         queryEmbedding.Vector,
         keywords: new[] { "搜索", "算法" },
         top: 5,
         new HybridSearchOptions<TechDocument>
         {
-            Filter = doc => doc.Category == "算法"  // 预过滤
+            Filter = doc => doc.Category == "算法"
         }
     ).ToListAsync();
-
-    Console.WriteLine($"📊 过滤后的混合检索结果:\n");
-
-    int index = 1;
-    foreach (var result in results)
+    Console.WriteLine($"✓找到 {filteredResults.Count} 个结果（仅'算法'分类）");
+    foreach (var result in filteredResults)
     {
-        Console.WriteLine($"  {index}. {result.Record.Title}");
-        Console.WriteLine($"     分类: {result.Record.Category} ✓");
-        Console.WriteLine($"     RRF 评分: {result.Score:F4}");
-        Console.WriteLine();
-        index++;
+        Console.WriteLine($"  - {result.Record.Title} (分类: {result.Record.Category})");
     }
-
-    Console.WriteLine("💡 过滤器优势:");
-    Console.WriteLine("   - 减少搜索空间，提高性能");
-    Console.WriteLine("   - 确保结果符合业务规则（如权限、分类等）");
-    Console.WriteLine("   - 过滤在检索前执行，不影响评分");
-    Console.WriteLine();
-}
-
-/// <summary>
-/// 示例 4: 分页支持
-/// </summary>
-static async Task Example4_HybridSearchPaging(
-    QdrantVectorStore vectorStore,
-    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
-{
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    Console.WriteLine("示例 4: 分页支持");
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
-    var collection = vectorStore.GetCollection<Guid, TechDocument>("tech_docs");
-    var hybridSearchCollection = (IKeywordHybridSearchable<TechDocument>)collection;
-
-    string query = "AI 技术";
-    Console.WriteLine($"🔍 查询: {query}");
-    Console.WriteLine($"📄 分页设置: Top=3, Skip=0/3/6\n");
-
-    var queryEmbedding = await embeddingGenerator.GenerateAsync(query);
-
-    // 第一页
-    Console.WriteLine("📖 第 1 页 (Skip=0, Top=3):");
+    // 3.2 分页支持
+    Console.WriteLine("\n特性2-分页支持（Skip + Top）");
     var page1 = await hybridSearchCollection.HybridSearchAsync(
         queryEmbedding.Vector,
-        keywords: new[] { "AI", "技术" },
-        top: 3,
+        keywords: keywords,
+        top: 2,
         new HybridSearchOptions<TechDocument> { Skip = 0 }
     ).ToListAsync();
+    Console.WriteLine($"      ✓ 第 1 页（Top=2, Skip=0）: {page1[0].Record.Title}, {page1[1].Record.Title}");
 
-    int page1Index = 1;
-    foreach (var result in page1)
-    {
-        Console.WriteLine($"   {page1Index}. {result.Record.Title} (评分: {result.Score:F4})");
-        page1Index++;
-    }
-
-    // 第二页
-    Console.WriteLine("\n📖 第 2 页 (Skip=3, Top=3):");
     var page2 = await hybridSearchCollection.HybridSearchAsync(
         queryEmbedding.Vector,
-        keywords: new[] { "AI", "技术" },
-        top: 3,
-        new HybridSearchOptions<TechDocument> { Skip = 3 }
+        keywords: keywords,
+        top: 2,
+        new HybridSearchOptions<TechDocument> { Skip = 2 }
     ).ToListAsync();
+    Console.WriteLine($"      ✓ 第 2 页（Top=2, Skip=2）: {page2[0].Record.Title}, {page2[1].Record.Title}");
 
-    int page2Index = 4;
-    foreach (var result in page2)
-    {
-        Console.WriteLine($"   {page2Index}. {result.Record.Title} (评分: {result.Score:F4})");
-        page2Index++;
-    }
+    // ========== 4. RRF 算法原理 ==========
+    Console.WriteLine("\n【步骤 4】RRF 重排序算法原理\n");
+    Console.WriteLine("   📐 公式: RRF_score = Σ weight / (k + rank)");
+    Console.WriteLine("      - k: 常量（通常为 60）");
+    Console.WriteLine("      - rank: 文档在各检索系统中的排名");
+    Console.WriteLine("      - weight: 各检索系统的权重（如 0.1 向量 + 0.9 全文）\n");
 
-    // 第三页
-    Console.WriteLine("\n📖 第 3 页 (Skip=6, Top=3):");
-    var page3 = await hybridSearchCollection.HybridSearchAsync(
-        queryEmbedding.Vector,
-        keywords: new[] { "AI", "技术" },
-        top: 3,
-        new HybridSearchOptions<TechDocument> { Skip = 6 }
-    ).ToListAsync();
+    Console.WriteLine("   💡 RRF 优势:");
+    Console.WriteLine("      ✓ 排名归一化: 不依赖绝对评分值");
+    Console.WriteLine("      ✓ 跨尺度融合: 向量相似度和 BM25 评分可公平合并");
+    Console.WriteLine("      ✓ 鲁棒性强: 对单一检索系统的异常值不敏感");
+    Console.WriteLine("      ✓ 工业标准: Cosmos DB、Qdrant、Weaviate 等原生支持\n");
 
-    int page3Index = 7;
-    foreach (var result in page3)
-    {
-        Console.WriteLine($"   {page3Index}. {result.Record.Title} (评分: {result.Score:F4})");
-        page3Index++;
-    }
+    // ========== 5. 最佳实践 ==========
+    Console.WriteLine("【步骤 5】生产环境最佳实践\n");
+    Console.WriteLine("   ✅ 推荐配置:");
+    Console.WriteLine("      1. 使用 LLM 智能提取关键词（提高准确率）");
+    Console.WriteLine("      2. 启用元数据过滤（如权限、分类、时间范围）");
+    Console.WriteLine("      3. 实现分页（避免一次返回大量结果）");
+    Console.WriteLine("      4. 缓存常见查询的关键词（减少 LLM 调用）");
+    Console.WriteLine("      5. 监控 RRF 评分分布（优化权重配置）\n");
 
-    Console.WriteLine("\n💡 分页实现:");
-    Console.WriteLine("   - Skip: 跳过前 N 个结果");
-    Console.WriteLine("   - Top: 返回的结果数量");
-    Console.WriteLine("   - 评分排序在分页前完成，确保一致性");
-    Console.WriteLine();
+    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    Console.WriteLine("✅ 混合检索综合演示完成！");
+    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 }
 
 /// <summary>
-/// 示例 5: RRF 评分解析
+/// 显示搜索结果的辅助方法
 /// </summary>
-static async Task Example5_UnderstandingRRFScore(
-    QdrantVectorStore vectorStore,
-    IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+static void DisplayResults<T>(List<VectorSearchResult<T>> results, string indent = "") where T : TechDocument
 {
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    Console.WriteLine("示例 5: RRF（Reciprocal Rank Fusion）评分解析");
-    Console.WriteLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
-    var collection = vectorStore.GetCollection<Guid, TechDocument>("tech_docs");
-    var hybridSearchCollection = (IKeywordHybridSearchable<TechDocument>)collection;
-
-    string query = "混合检索";
-    Console.WriteLine($"🔍 查询: {query}\n");
-
-    var queryEmbedding = await embeddingGenerator.GenerateAsync(query);
-
-    // 1. 纯向量搜索
-    Console.WriteLine("📍 第 1 步: 纯向量搜索排名");
-    var vectorResults = await collection.SearchAsync(
-        queryEmbedding.Vector,
-        top: 5
-    ).ToListAsync();
-
-    int vectorRank = 1;
-    foreach (var result in vectorResults)
+    for (int i = 0; i < results.Count; i++)
     {
-        Console.WriteLine($"   排名 {vectorRank}: {result.Record.Title,-35} (向量评分: {result.Score:F4})");
-        vectorRank++;
+        Console.WriteLine($"{indent}{i + 1}. {results[i].Record.Title} (评分: {results[i].Score:F4})");
     }
-
-    // 2. 混合检索
-    Console.WriteLine("\n📍 第 2 步: 混合检索（向量 + 关键词 '混合'、'检索'）");
-    var hybridResults = await hybridSearchCollection.HybridSearchAsync(
-        queryEmbedding.Vector,
-        keywords: new[] { "混合", "检索" },
-        top: 5
-    ).ToListAsync();
-
-    int hybridRank = 1;
-    foreach (var result in hybridResults)
-    {
-        Console.WriteLine($"   排名 {hybridRank}: {result.Record.Title,-35} (RRF 评分: {result.Score:F4})");
-        hybridRank++;
-    }
-
-    Console.WriteLine("\n📐 RRF 算法原理:");
-    Console.WriteLine("   公式: RRF_score = Σ weight / (k + rank)");
-    Console.WriteLine("   - k: 常量，通常为 60");
-    Console.WriteLine("   - rank: 文档在各检索系统中的排名");
-    Console.WriteLine("   - weight: 各检索系统的权重（如 0.1 向量 + 0.9 全文）");
-    Console.WriteLine();
-
-    Console.WriteLine("📊 评分融合过程（假设）:");
-    Console.WriteLine("   文档 A:");
-    Console.WriteLine("     - 向量搜索排名 1: 0.1 / (60 + 1) ≈ 0.0016");
-    Console.WriteLine("     - 关键词搜索排名 1: 0.9 / (60 + 1) ≈ 0.0148");
-    Console.WriteLine("     - RRF 总分: 0.0164");
-    Console.WriteLine();
-    Console.WriteLine("   文档 B:");
-    Console.WriteLine("     - 向量搜索排名 5: 0.1 / (60 + 5) ≈ 0.0015");
-    Console.WriteLine("     - 关键词搜索未出现: 0");
-    Console.WriteLine("     - RRF 总分: 0.0015");
-    Console.WriteLine();
-
-    Console.WriteLine("💡 RRF 优势:");
-    Console.WriteLine("   ✓ 排名归一化: 不依赖绝对评分值");
-    Console.WriteLine("   ✓ 跨尺度融合: 向量相似度和 BM25 评分可公平合并");
-    Console.WriteLine("   ✓ 鲁棒性强: 对单一检索系统的异常值不敏感");
-    Console.WriteLine("   ✓ 工业标准: Cosmos DB、Qdrant、Weaviate 等原生支持");
     Console.WriteLine();
 }
+
+#region 关键词提取辅助方法
+
+/// <summary>
+/// 使用 LLM 从查询中智能提取关键词
+/// </summary>
+static async Task<string[]> ExtractKeywordsWithLLM(Kernel kernel, string query)
+{
+    var prompt = $@"
+从以下查询中提取 2-3 个最重要的关键词，用于全文搜索。
+只返回关键词，用逗号分隔，不要有其他内容。
+
+示例：
+查询：如何实现高效的搜索功能
+关键词：搜索,检索,高效
+
+查询：{query}
+关键词：";
+
+    try
+    {
+        var result = await kernel.InvokePromptAsync(prompt);
+        var keywords = result.ToString()
+            .Split(new[] { ',', '，', ' ', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(k => k.Trim())
+            .Where(k => !string.IsNullOrWhiteSpace(k))
+            .Take(3)
+            .ToArray();
+
+        return keywords.Length > 0 ? keywords : new[] { query };
+    }
+    catch
+    {
+        // 如果 LLM 调用失败，回退到简单提取
+        return ExtractChineseKeywords(query);
+    }
+}
+
+/// <summary>
+/// 简单的中文关键词提取（基于正则表达式和停用词过滤）
+/// </summary>
+static string[] ExtractChineseKeywords(string query)
+{
+    var stopWords = new HashSet<string>
+    {
+        "的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都", "一",
+        "一个", "上", "也", "很", "到", "说", "要", "去", "你", "会", "着", "没有",
+        "看", "好", "自己", "这", "那", "如何", "怎么", "什么", "哪些", "为什么",
+        "能", "可以", "或者", "但是", "然而", "因为", "所以", "实现", "功能"
+    };
+
+    var pattern = @"[\u4e00-\u9fa5]{2,4}";
+    var matches = Regex.Matches(query, pattern);
+
+    var keywords = matches
+        .Select(m => m.Value)
+        .Where(w => !stopWords.Contains(w))
+        .Distinct()
+        .Take(3)
+        .ToArray();
+
+    return keywords.Length > 0 ? keywords : new[] { query };
+}
+
+#endregion
 
 /// <summary>
 /// 技术文档数据模型
 /// </summary>
 public class TechDocument
 {
-    /// <summary>
-    /// 文档 ID
-    /// </summary>
     [VectorStoreKey]
     public required Guid Id { get; set; }
 
-    /// <summary>
-    /// 文档标题
-    /// </summary>
     [VectorStoreData]
     public required string Title { get; set; }
 
-    /// <summary>
-    /// 文档内容（用于全文搜索和向量化）
-    /// </summary>
     [VectorStoreData(IsFullTextIndexed = true)]  // 标记为全文搜索字段
     public required string Content { get; set; }
 
-    /// <summary>
-    /// 分类（用于过滤）
-    /// </summary>
     [VectorStoreData(IsIndexed = true)]  // 标记为可过滤字段
     public required string Category { get; set; }
 
-    /// <summary>
-    /// 标签列表
-    /// </summary>
     [VectorStoreData]
     public required List<string> Tags { get; set; }
 
-    /// <summary>
-    /// 向量嵌入（用于向量搜索）
-    /// </summary>
     [VectorStoreVector(768)]  // 768 维向量（nomic-embed-text 模型）
     public ReadOnlyMemory<float>? Vector { get; set; }
 }
