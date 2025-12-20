@@ -79,6 +79,7 @@ class Program
         var vectorStore = new InMemoryVectorStore(new() { EmbeddingGenerator = embeddingGenerator });
 
         // 获取集合
+        // 如果没有集合会自动创建
         var collection = vectorStore.GetCollection<Guid, DataModel>("knowledge_base");
         await collection.EnsureCollectionExistsAsync();
 

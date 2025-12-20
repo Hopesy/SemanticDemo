@@ -1,34 +1,35 @@
 <Solution>
   <Folder Name="/Common/">
-    <Project Path="Common\Common.csproj" Type="C#" />
+    <Project Path="Common\Common.csproj" />
   </Folder>
 
   <Folder Name="/Starts/">
-    <Project Path="Starts\GettingStarted\GettingStarted.csproj" Type="C#" />
-    <Project Path="Starts\BasicKernelLoading\BasicKernelLoading.csproj" Type="C#" />
-    <Project Path="Starts\SemanticFunctionInline\SemanticFunctionInline.csproj" Type="C#" />
-    <Project Path="Starts\KernelArgumentsChat\KernelArgumentsChat.csproj" Type="C#" />
-    <Project Path="Starts\FunctionCalling\FunctionCalling.csproj" Type="C#" />
+    <Project Path="Starts\GettingStarted\GettingStarted.csproj" />
+    <Project Path="Starts\BasicKernelLoading\BasicKernelLoading.csproj" />
+    <Project Path="Starts\SemanticFunctionInline\SemanticFunctionInline.csproj" />
+    <Project Path="Starts\KernelArgumentsChat\KernelArgumentsChat.csproj" />
+    <Project Path="Starts\FunctionCalling\FunctionCalling.csproj" />
   </Folder>
 
   <Folder Name="/Concepts/">
-    <Project Path="Concepts\ChatCompletion\ChatCompletion.csproj" Type="C#" />
-    <Project Path="Concepts\Plugins\Plugins.csproj" Type="C#" />
-    <Project Path="Concepts\Memory\Memory.csproj" Type="C#" />
-    <Project Path="Concepts\Streaming\Streaming.csproj" Type="C#" />
-    <Project Path="Concepts\FunctionCallingAdvanced\FunctionCallingAdvanced.csproj" Type="C#" />
-    <Project Path="Concepts\PromptTemplates\PromptTemplates.csproj" Type="C#" />
-    <Project Path="Concepts\TextGeneration\TextGeneration.csproj" Type="C#" />
-    <Project Path="Concepts\Filtering\Filtering.csproj" Type="C#" />
-    <Project Path="Concepts\RAG\RAG.csproj" Type="C#" />
-    <Project Path="Concepts/TextSearch/TextSearch.csproj" />
-    <Project Path="Concepts\Agents\Agents.csproj" Type="C#" />
-    <Project Path="Concepts\Search\Search.csproj" Type="C#" />
-    <Project Path="Concepts\DependencyInjection\DependencyInjection.csproj" Type="C#" />
+    <Project Path="Concepts\ChatCompletion\ChatCompletion.csproj" />
+    <Project Path="Concepts\Plugins\Plugins.csproj" />
+    <Project Path="Concepts\Memory\Memory.csproj" />
+    <Project Path="Concepts\Streaming\Streaming.csproj" />
+    <Project Path="Concepts\FunctionCallingAdvanced\FunctionCallingAdvanced.csproj" />
+    <Project Path="Concepts\PromptTemplates\PromptTemplates.csproj" />
+    <Project Path="Concepts\TextGeneration\TextGeneration.csproj" />
+    <Project Path="Concepts\Filtering\Filtering.csproj" />
+    <Project Path="Concepts\RAG\RAG.csproj" />
+    <Project Path="Concepts\Agents\Agents.csproj" />
+    <Project Path="Concepts\Search\Search.csproj" />
+    <Project Path="Concepts\DependencyInjection\DependencyInjection.csproj" />
   </Folder>
 
   <Folder Name="/Advances/">
-    <Project Path="Advances\OrderProcessWorkflow\OrderProcessWorkflow.csproj" Type="C#" />
+    <Project Path="Advances\OrderProcessWorkflow\OrderProcessWorkflow.csproj" />
+    <Project Path="Advances\HybridSearch\HybridSearch.csproj" />
+    <Project Path="Advances\TextSearch\TextSearch.csproj" />
   </Folder>
 
   <Properties Name="Configuration">
