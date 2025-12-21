@@ -5,6 +5,7 @@ using Microsoft.ML.Tokenizers;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace TextChunking;
 
@@ -59,18 +60,20 @@ class Program
             """;
         // 步骤 1：文本分块
         Console.WriteLine("📝 步骤 1：文本分块");
-        Console.WriteLine(new string('─', 60));
         // 使用Tiktoken可以精确计数，默认的效果不够准确
         var ragTokenizer = TiktokenTokenizer.CreateForModel("gpt-4");
-        // 两阶段分块：先分行，再分段
+        // 两阶段分块：先分行，再分段，以保证语义完整性
         var ragLines = TextChunker.SplitPlainTextLines(
             ragText,
             maxTokensPerLine: 30,
             tokenCounter: t => ragTokenizer.CountTokens(t));
-        // 使用重叠提高检索效果
+        // overlapTokens使用重叠提高检索效果
+        // chunkHeader会被添加到每个分块的开头，用于为每个块添加统一的元数据信息
+        // 适合多文档具有相同内容的场景;适合·需要引用来源的问答系统
         var ragChunks = TextChunker.SplitPlainTextParagraphs(
             ragLines,
             maxTokensPerParagraph: 50,
+            chunkHeader: "文档: 2024年度预算报告.pdf\n来源: 财务部\n日期: 2024-01-15\n\n",
             overlapTokens: 10,  // 块之间有10个Token的重叠
             tokenCounter: t => ragTokenizer.CountTokens(t));
         Console.WriteLine($"✅ 原始文本分割为 {ragChunks.Count} 个块");
@@ -80,7 +83,6 @@ class Program
             Console.WriteLine($"块 {i + 1}: {tokenCount} tokens");
         }
         Console.WriteLine();
-
         // 创建 Embedding Generator（向量生成器）
         var embeddingGenerator = Settings.CreateEmbeddingGenerator();
         // 创建InMemory内存向量存储,生产环境推荐使用：Qdrant、Chroma、Pinecone 等
@@ -91,9 +93,9 @@ class Program
         // 遍历每个文本块，生成向量并存储
         for (int i = 0; i < ragChunks.Count; i++)
         {
-            // 创建数据模型
-            // ChunkDataModel 使用 [VectorStoreVector] 特性标注
-            // Content 字段会自动转换为向量（通过 Embedding => Content）
+            // vectorStore初始化的时候传入了EmbeddingGenerator
+            // Content字段会自动转换为向量（通过Embedding => Content），不需要主动调用
+            //var embeddingResult = await embeddingGenerator.GenerateAsync(ragChunks[i]);
             var record = new ChunkDataModel
             {
                 Key = i + 1,

@@ -97,6 +97,13 @@ class Program
         // 插入数据并生成向量
         foreach (var (title, content, link, category) in knowledgeData)
         {
+            //由于初始化的时候传入了EmbeddingGenerator
+            //var vectorStore = new InMemoryVectorStore(new()
+            //{
+            //    EmbeddingGenerator = embeddingGenerator  // 👈 关键！
+            //});
+            ////UpsertAsyncd的时候会自动调用 EmbeddingGenerator 生成向量
+            //下面这行代码只是为了演示，可以省略
             var embedding = await embeddingGenerator.GenerateAsync(content);
             var record = new DataModel
             {

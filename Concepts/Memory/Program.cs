@@ -24,6 +24,7 @@ class Program
             // 创建 IEmbeddingGenerator（使用最新的 Microsoft.Extensions.AI API）
             var embeddingGenerator = Settings.CreateEmbeddingGenerator();
             // 创建 InMemory VectorStore(向量数据库，存储位置为内存)
+            // 初始化的时候由于没传入embeddingGenerator，update时候不能自动调用，所以需要在存储数据时需要手动生成嵌入
             var vectorStore = new InMemoryVectorStore();
             // ===== 示例 1: 文本嵌入生成 =====
             await Example1_TextEmbedding(embeddingGenerator);
