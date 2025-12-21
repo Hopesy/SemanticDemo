@@ -28,6 +28,7 @@
 
   <Folder Name="/Advances/">
     <Project Path="Advances\OrderProcessWorkflow\OrderProcessWorkflow.csproj" />
+    <Project Path="Advances/TextChunking/TextChunking.csproj" />
     <Project Path="Advances\HybridSearch\HybridSearch.csproj" />
     <Project Path="Advances\TextSearch\TextSearch.csproj" />
   </Folder>

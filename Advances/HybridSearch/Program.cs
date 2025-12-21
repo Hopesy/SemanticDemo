@@ -164,6 +164,8 @@ static async Task ComprehensiveHybridSearchExample(Kernel kernel, QdrantVectorSt
     ).ToListAsync();
     DisplayResults(keywordResults);
     // 2.3 混合检索（推荐）
+    //调用HybridSearchAsync并传入向量+关键词会自动应用RRF重排序
+    //
     Console.WriteLine("方式3：混合检索（语义 + 精确匹配）⭐ 推荐");
     var hybridResults = await hybridSearchCollection.HybridSearchAsync(
         queryEmbedding.Vector,
@@ -196,7 +198,7 @@ static async Task ComprehensiveHybridSearchExample(Kernel kernel, QdrantVectorSt
         queryEmbedding.Vector,
         keywords: keywords,
         top: 2,
-        new HybridSearchOptions<TechDocument> { Skip = 0 }
+        new HybridSearchOptions<TechDocument> { Skip = 0, }
     ).ToListAsync();
     Console.WriteLine($"      ✓ 第 1 页（Top=2, Skip=0）: {page1[0].Record.Title}, {page1[1].Record.Title}");
 
